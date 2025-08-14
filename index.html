@@ -374,7 +374,7 @@
                 intranetContent.style.display = 'flex';
             }
 
-            if (sessionStorage.getItem('isLoggedIn') === 'true') {
+            if (localStorage.getItem('isLoggedIn') === 'true') {
                 showMainContent();
             }
 
@@ -384,7 +384,7 @@
                 const password = document.getElementById('password').value;
 
                 if (email.toLowerCase().endsWith('@petrobras.com.br') && password === 'tton2025') {
-                    sessionStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('isLoggedIn', 'true');
                     errorMessage.classList.add('hidden');
                     showMainContent();
                 } else {
@@ -393,7 +393,7 @@
             });
 
             logoutBtn.addEventListener('click', () => {
-                sessionStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('isLoggedIn');
                 window.location.reload();
             });
         });
