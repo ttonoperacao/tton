@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Adicionada a classe 'dark' dinamicamente via JS -->
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -6,11 +7,18 @@
     <title>Intranet TTON - Login</title>
     <!-- Carrega o Tailwind CSS para estilização moderna e responsiva -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Configuração do Tailwind para habilitar o modo noturno baseado em classe
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Cor de fundo cinza claro */
+            /* Transição suave de cores para o modo noturno */
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         /* Esconde o conteúdo da intranet por padrão até que o login seja bem-sucedido */
         #intranet-content {
@@ -39,6 +47,9 @@
             background-color: #f3f4f6;
             padding: 1rem;
         }
+        .dark #panel-iframe-container:fullscreen {
+             background-color: #111827; /* Fundo escuro em tela cheia */
+        }
         #panel-iframe-container:fullscreen .iframe-container {
             height: calc(100vh - 80px); /* Ajusta a altura em tela cheia */
         }
@@ -47,10 +58,11 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen">
+<!-- Classes de cores para modo claro e escuro -->
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex items-center justify-center min-h-screen">
 
     <!-- Seção do formulário de login (visível por padrão) -->
-    <div id="login-container" class="w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
+    <div id="login-container" class="w-full max-w-md p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
         <div class="flex flex-col items-center mb-6">
             <!-- Logo de emoji de caminhão na tela de login -->
             <div class="flex items-center space-x-2">
@@ -60,17 +72,17 @@
                 <h1 class="text-3xl font-bold text-[#009144]">TTON</h1>
             </div>
             <h2 class="mt-4 text-2xl font-bold text-[#009144]">Acesso Portal</h2>
-            <p class="text-gray-500 mt-2 text-center">Insira o seu e-mail e senha para continuar.</p>
+            <p class="text-gray-500 dark:text-gray-400 mt-2 text-center">Insira o seu e-mail e senha para continuar.</p>
         </div>
         
         <form id="login-form" class="space-y-4">
             <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">E-mail</label>
-                <input type="email" id="email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#009144] focus:ring focus:ring-[#009144] focus:ring-opacity-50 p-2 border" placeholder="" required>
+                <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">E-mail</label>
+                <input type="email" id="email" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm focus:border-[#009144] focus:ring focus:ring-[#009144] focus:ring-opacity-50 p-2 border" placeholder="" required>
             </div>
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
-                <input type="password" id="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#009144] focus:ring focus:ring-[#009144] focus:ring-opacity-50 p-2 border" required>
+                <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
+                <input type="password" id="password" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm focus:border-[#009144] focus:ring focus:ring-[#009144] focus:ring-opacity-50 p-2 border" required>
             </div>
             
             <div id="error-message" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md" role="alert">
@@ -99,11 +111,16 @@
                     </div>
                 </div>
                 <!-- Data e Relógio em tempo real à direita do cabeçalho -->
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-4 mt-4 sm:mt-0">
                     <div class="text-right">
                         <p id="current-date" class="text-sm font-medium"></p>
                         <p id="current-time" class="text-2xl font-bold"></p>
                     </div>
+                    <!-- Botão de alternância de tema -->
+                    <button id="theme-toggle" type="button" class="text-white hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                        <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                        <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                    </button>
                     <button id="logout-btn" class="bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition-colors duration-300">Sair</button>
                 </div>
             </div>
@@ -117,8 +134,8 @@
                 <!-- Seção de Avisos Importantes -->
                 <section class="mb-8">
                     <h2 class="text-2xl font-bold text-[#009144] mb-4">Avisos Importantes</h2>
-                    <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-[#FFD100]">
-                        <p class="text-gray-700">Site em desenvolvimento.</p>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border-l-4 border-[#FFD100]">
+                        <p class="text-gray-700 dark:text-gray-300">Site em desenvolvimento.</p>
                     </div>
                 </section>
 
@@ -126,74 +143,74 @@
                 <div class="flex flex-col lg:flex-row lg:space-x-6">
 
                     <!-- Seção de Acesso aos Painéis -->
-                    <section class="mb-8 p-6 bg-gray-200 rounded-xl lg:w-1/2">
+                    <section class="mb-8 p-6 bg-gray-200 dark:bg-gray-800 rounded-xl lg:w-1/2">
                         <h2 class="text-2xl font-bold text-white mb-4 bg-[#009144] p-4 rounded-xl text-center">Painéis de Acompanhamento 📊</h2>
                         <div class="flex flex-col space-y-4">
                             <!-- Bloco TTON -->
-                            <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="bg-white dark:bg-gray-700 p-4 rounded-xl shadow-md">
                                 <button class="collapsible-header w-full flex justify-between items-center text-left">
-                                    <h3 class="text-lg font-bold text-[#004C84]">TTON</h3>
-                                    <svg class="w-6 h-6 transform transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    <h3 class="text-lg font-bold text-[#004C84] dark:text-blue-300">TTON</h3>
+                                    <svg class="w-6 h-6 transform transition-transform text-gray-800 dark:text-gray-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
                                 <div class="collapsible-content hidden mt-2 flex flex-col space-y-2">
-                                    <a href="https://app.powerbi.com/reportEmbed?reportId=d564b17b-98ca-4776-97d7-e2f8ea808aea&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 p-4 rounded-xl hover:bg-[#009144] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
+                                    <a href="https://app.powerbi.com/reportEmbed?reportId=d564b17b-98ca-4776-97d7-e2f8ea808aea&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 dark:bg-gray-600 p-4 rounded-xl hover:bg-[#009144] dark:hover:bg-[#007A38] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bar-chart-2"><line x1="18" x2="18" y1="20" y2="10"></line><line x1="12" x2="12" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="14"></line></svg></div>
-                                        <span class="text-base font-semibold text-gray-900 group-hover:text-white">TTON - Gestão de Passivos</span>
+                                        <span class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-white">TTON - Gestão de Passivos</span>
                                     </a>
-                                    <a href="https://app.powerbi.com/reportEmbed?reportId=f78c7c55-5900-4657-8551-05591aa74207&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 p-4 rounded-xl hover:bg-[#009144] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
+                                    <a href="https://app.powerbi.com/reportEmbed?reportId=f78c7c55-5900-4657-8551-05591aa74207&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 dark:bg-gray-600 p-4 rounded-xl hover:bg-[#009144] dark:hover:bg-[#007A38] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-checks"><path d="m3 12.5 2 2.5 5-5"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/><path d="M3 6h.01"/><path d="M3 18h.01"/></svg></div>
-                                        <span class="text-base font-semibold text-gray-900 group-hover:text-white">TTON - Gestão de Entregas</span>
+                                        <span class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-white">TTON - Gestão de Entregas</span>
                                     </a>
-                                    <a href="https://app.powerbi.com/reportEmbed?reportId=57127725-c9a9-4424-97fe-5b00f2f13499&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 p-4 rounded-xl hover:bg-[#009144] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
+                                    <a href="https://app.powerbi.com/reportEmbed?reportId=57127725-c9a9-4424-97fe-5b00f2f13499&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 dark:bg-gray-600 p-4 rounded-xl hover:bg-[#009144] dark:hover:bg-[#007A38] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bar-chart-2"><line x1="18" x2="18" y1="20" y2="10"></line><line x1="12" x2="12" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="14"></line></svg></div>
-                                        <span class="text-base font-semibold text-gray-900 group-hover:text-white">TTON - Performance Mirassol</span>
+                                        <span class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-white">TTON - Performance Mirassol</span>
                                     </a>
                                 </div>
                             </div>
                             <!-- Bloco CILEP -->
-                            <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="bg-white dark:bg-gray-700 p-4 rounded-xl shadow-md">
                                 <button class="collapsible-header w-full flex justify-between items-center text-left">
-                                    <h3 class="text-lg font-bold text-[#004C84]">CILEP</h3>
-                                    <svg class="w-6 h-6 transform transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    <h3 class="text-lg font-bold text-[#004C84] dark:text-blue-300">CILEP</h3>
+                                    <svg class="w-6 h-6 transform transition-transform text-gray-800 dark:text-gray-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
                                 <div class="collapsible-content hidden mt-2 flex flex-col space-y-2">
-                                    <a href="https://app.powerbi.com/reportEmbed?reportId=f95abd55-7ddf-4f05-8f26-0f3fc8ad9c91&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 p-4 rounded-xl hover:bg-[#009144] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
+                                    <a href="https://app.powerbi.com/reportEmbed?reportId=f95abd55-7ddf-4f05-8f26-0f3fc8ad9c91&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 dark:bg-gray-600 p-4 rounded-xl hover:bg-[#009144] dark:hover:bg-[#007A38] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-triangle"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></div>
-                                        <span class="text-base font-semibold text-gray-900 group-hover:text-white">CILEP - Painel de Emergências</span>
+                                        <span class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-white">CILEP - Painel de Emergências</span>
                                     </a>
-                                    <a href="https://app.powerbi.com/reportEmbed?reportId=d1605af2-abba-455a-b6a8-f789aef311dd&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 p-4 rounded-xl hover:bg-[#009144] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
+                                    <a href="https://app.powerbi.com/reportEmbed?reportId=d1605af2-abba-455a-b6a8-f789aef311dd&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 dark:bg-gray-600 p-4 rounded-xl hover:bg-[#009144] dark:hover:bg-[#007A38] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gauge-circle"><path d="M15.6 2.7a10 10 0 1 0 5.7 5.7"/><path d="M13 12L7 16"/><path d="M12 12V3"/><path d="M13.4 2.1a10 10 0 0 0-8.7 8.7"/><path d="M8.8 8.8a2 2 0 0 1 2.8 2.8"/></svg></div>
-                                        <span class="text-base font-semibold text-gray-900 group-hover:text-white">CILEP - Painel CSP</span>
+                                        <span class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-white">CILEP - Painel CSP</span>
                                     </a>
                                 </div>
                             </div>
                             <!-- Bloco OPTER -->
-                            <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="bg-white dark:bg-gray-700 p-4 rounded-xl shadow-md">
                                 <button class="collapsible-header w-full flex justify-between items-center text-left">
-                                    <h3 class="text-lg font-bold text-[#004C84]">OPTER</h3>
-                                    <svg class="w-6 h-6 transform transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    <h3 class="text-lg font-bold text-[#004C84] dark:text-blue-300">OPTER</h3>
+                                    <svg class="w-6 h-6 transform transition-transform text-gray-800 dark:text-gray-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
                                 <div class="collapsible-content hidden mt-2 flex flex-col space-y-2">
-                                    <a href="https://app.powerbi.com/reportEmbed?reportId=5524279d-50f7-4b79-88b3-7ddad5b3bc5e&appId=6814e296-08e1-4768-a811-9df0f62d997e&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 p-4 rounded-xl hover:bg-[#009144] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
+                                    <a href="https://app.powerbi.com/reportEmbed?reportId=5524279d-50f7-4b79-88b3-7ddad5b3bc5e&appId=6814e296-08e1-4768-a811-9df0f62d997e&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 dark:bg-gray-600 p-4 rounded-xl hover:bg-[#009144] dark:hover:bg-[#007A38] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-line-chart"><path d="M3 3v18h18"/><path d="m18 10-6 6-4-4-5 5"/></svg></div>
-                                        <span class="text-base font-semibold text-gray-900 group-hover:text-white">OPTER - Controle de Atendimentos Dedicados</span>
+                                        <span class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-white">OPTER - Controle de Atendimentos Dedicados</span>
                                     </a>
-                                    <a href="https://app.powerbi.com/reportEmbed?reportId=3c201f60-6d84-47e3-8fbe-22f4eff7d941&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 p-4 rounded-xl hover:bg-[#009144] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
+                                    <a href="https://app.powerbi.com/reportEmbed?reportId=3c201f60-6d84-47e3-8fbe-22f4eff7d941&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 dark:bg-gray-600 p-4 rounded-xl hover:bg-[#009144] dark:hover:bg-[#007A38] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-line-chart"><path d="M3 3v18h18"/><path d="m18 10-6 6-4-4-5 5"/></svg></div>
-                                        <span class="text-base font-semibold text-gray-900 group-hover:text-white">OPTER - IACT</span>
+                                        <span class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-white">OPTER - IACT</span>
                                     </a>
                                 </div>
                             </div>
                             <!-- Bloco de outros Painéis -->
-                            <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="bg-white dark:bg-gray-700 p-4 rounded-xl shadow-md">
                                 <button class="collapsible-header w-full flex justify-between items-center text-left">
-                                    <h3 class="text-lg font-bold text-[#004C84]">Outros Painéis</h3>
-                                    <svg class="w-6 h-6 transform transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    <h3 class="text-lg font-bold text-[#004C84] dark:text-blue-300">Outros Painéis</h3>
+                                    <svg class="w-6 h-6 transform transition-transform text-gray-800 dark:text-gray-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
                                 <div class="collapsible-content hidden mt-2 flex flex-col space-y-2">
-                                    <a href="https://app.powerbi.com/reportEmbed?reportId=96977b34-0d5d-4166-a137-1a99f4bcf731&appId=150dff10-2a9d-456b-8cbf-fea12c90e485&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 p-4 rounded-xl hover:bg-[#009144] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
+                                    <a href="https://app.powerbi.com/reportEmbed?reportId=96977b34-0d5d-4166-a137-1a99f4bcf731&appId=150dff10-2a9d-456b-8cbf-fea12c90e485&autoAuth=true&ctid=5b6f6241-9a57-4be4-8e50-1dfa72e79a57&navContentPaneEnabled=true&filterPaneEnabled=false&toolbarEnabled=false" class="panel-link bg-gray-50 dark:bg-gray-600 p-4 rounded-xl hover:bg-[#009144] dark:hover:bg-[#007A38] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
-                                        <span class="text-base font-semibold text-gray-900 group-hover:text-white">Painel ITM</span>
+                                        <span class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-white">Painel ITM</span>
                                     </a>
                                 </div>
                             </div>
@@ -202,43 +219,43 @@
                     
                     <div class="lg:w-1/2 flex flex-col space-y-8">
                         <!-- Seção de Documentos Úteis -->
-                        <section class="p-6 bg-gray-200 rounded-xl">
+                        <section class="p-6 bg-gray-200 dark:bg-gray-800 rounded-xl">
                             <h2 class="text-2xl font-bold text-white mb-4 bg-[#009144] p-4 rounded-xl text-center">Documentos 📂</h2>
-                            <div class="bg-white p-6 rounded-xl shadow-md">
+                            <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-md">
                                 <ul class="space-y-4">
-                                    <li class="flex items-center p-3 hover:bg-[#009144] rounded-lg transition-all duration-300 group">
+                                    <li class="flex items-center p-3 hover:bg-[#009144] dark:hover:bg-[#007A38] rounded-lg transition-all duration-300 group">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white mr-4">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
                                         </div>
-                                        <a href="https://petrobrasbr.sharepoint.com/teams/bdoc_LOEP-LON-OPTER-TTON/Documentos%20Compartilhados/NP%2002%20-%20Interna%20TTON/16-Dados/ESTUDOS/Organograma/Organograma%20-%20TTON_18-07-2025.pdf?CT=1755081657034&OR=ItemsView" target="_blank" rel="noopener noreferrer" class="text-gray-900 group-hover:text-white font-medium flex-grow">TTON - Organograma</a>
-                                        <span class="text-sm text-gray-500 hidden sm:block group-hover:text-white">Atualizado em 18/07/2025</span>
+                                        <a href="https://petrobrasbr.sharepoint.com/teams/bdoc_LOEP-LON-OPTER-TTON/Documentos%20Compartilhados/NP%2002%20-%20Interna%20TTON/16-Dados/ESTUDOS/Organograma/Organograma%20-%20TTON_18-07-2025.pdf?CT=1755081657034&OR=ItemsView" target="_blank" rel="noopener noreferrer" class="text-gray-900 dark:text-gray-100 group-hover:text-white font-medium flex-grow">TTON - Organograma</a>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400 hidden sm:block group-hover:text-white">Atualizado em 18/07/2025</span>
                                     </li>
                                 </ul>
                             </div>
                         </section>
 
                         <!-- Seção de Links -->
-                        <section class="p-6 bg-gray-200 rounded-xl">
+                        <section class="p-6 bg-gray-200 dark:bg-gray-800 rounded-xl">
                             <h2 class="text-2xl font-bold text-white mb-4 bg-[#009144] p-4 rounded-xl text-center">Links 🔗</h2>
-                            <div class="bg-white p-6 rounded-xl shadow-md">
+                            <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-md">
                                 <ul class="space-y-4">
-                                    <li class="flex items-center p-3 hover:bg-[#009144] rounded-lg transition-all duration-300 group">
+                                    <li class="flex items-center p-3 hover:bg-[#009144] dark:hover:bg-[#007A38] rounded-lg transition-all duration-300 group">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white mr-4">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>
                                         </div>
-                                        <a href="https://onetms.onedeck.com.br/" target="_blank" rel="noopener noreferrer" class="text-gray-900 group-hover:text-white font-medium flex-grow">OneTMS</a>
+                                        <a href="https://onetms.onedeck.com.br/" target="_blank" rel="noopener noreferrer" class="text-gray-900 dark:text-gray-100 group-hover:text-white font-medium flex-grow">OneTMS</a>
                                     </li>
-                                    <li class="flex items-center p-3 hover:bg-[#009144] rounded-lg transition-all duration-300 group">
+                                    <li class="flex items-center p-3 hover:bg-[#009144] dark:hover:bg-[#007A38] rounded-lg transition-all duration-300 group">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white mr-4">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>
                                         </div>
-                                        <a href="https://mgn.cargolinks.com.br/login" target="_blank" rel="noopener noreferrer" class="text-gray-900 group-hover:text-white font-medium flex-grow">Cargolink</a>
+                                        <a href="https://mgn.cargolinks.com.br/login" target="_blank" rel="noopener noreferrer" class="text-gray-900 dark:text-gray-100 group-hover:text-white font-medium flex-grow">Cargolink</a>
                                     </li>
-                                    <li class="flex items-center p-3 hover:bg-[#009144] rounded-lg transition-all duration-300 group">
+                                    <li class="flex items-center p-3 hover:bg-[#009144] dark:hover:bg-[#007A38] rounded-lg transition-all duration-300 group">
                                         <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white mr-4">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>
                                         </div>
-                                        <a href="https://synclog.com.br/" target="_blank" rel="noopener noreferrer" class="text-gray-900 group-hover:text-white font-medium flex-grow">Synclog</a>
+                                        <a href="https://synclog.com.br/" target="_blank" rel="noopener noreferrer" class="text-gray-900 dark:text-gray-100 group-hover:text-white font-medium flex-grow">Synclog</a>
                                     </li>
                                 </ul>
                             </div>
@@ -252,13 +269,13 @@
                 <div class="flex justify-between items-center mb-4">
                     <h3 id="panel-title" class="text-2xl font-bold text-[#009144] flex-grow"></h3>
                     <div class="flex items-center space-x-2">
-                        <button id="fullscreen-btn" class="bg-gray-600 text-white p-2 rounded-lg font-semibold hover:bg-gray-700 transition-colors duration-300" title="Tela Cheia">
+                        <button id="fullscreen-btn" class="bg-gray-600 dark:bg-gray-700 text-white p-2 rounded-lg font-semibold hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-300" title="Tela Cheia">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
                         </button>
                         <button id="close-panel-btn" class="bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition-colors duration-300">Fechar Painel</button>
                     </div>
                 </div>
-                <div class="iframe-container bg-white rounded-xl shadow-md p-2">
+                <div class="iframe-container bg-white dark:bg-gray-800 rounded-xl shadow-md p-2">
                     <iframe id="panel-iframe" src="" frameborder="0" allowfullscreen="true"></iframe>
                 </div>
             </div>
@@ -275,6 +292,37 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- INÍCIO: LÓGICA DO MODO NOTURNO ---
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+            const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+            // Função para aplicar o tema (claro ou escuro)
+            const applyTheme = (theme) => {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    themeToggleLightIcon.classList.remove('hidden');
+                    themeToggleDarkIcon.classList.add('hidden');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    themeToggleDarkIcon.classList.remove('hidden');
+                    themeToggleLightIcon.classList.add('hidden');
+                }
+            };
+
+            // Verifica a preferência de tema do usuário no localStorage ou no sistema operacional
+            const currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            applyTheme(currentTheme);
+
+            // Adiciona o evento de clique ao botão de alternância de tema
+            themeToggleBtn.addEventListener('click', () => {
+                const isDarkMode = document.documentElement.classList.contains('dark');
+                const newTheme = isDarkMode ? 'light' : 'dark';
+                localStorage.setItem('theme', newTheme);
+                applyTheme(newTheme);
+            });
+            // --- FIM: LÓGICA DO MODO NOTURNO ---
+
             // Elementos de Login
             const loginForm = document.getElementById('login-form');
             const loginContainer = document.getElementById('login-container');
