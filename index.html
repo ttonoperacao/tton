@@ -417,7 +417,8 @@
                                 </div>
                                 <div class="w-full md:w-2/3 mt-4 md:mt-0 md:ml-6">
                                     <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Assertividade do Modelo</h3>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">Este medidor representa a percentagem de pedidos que foram classificados automaticamente com sucesso. A meta é estar acima de 80%. Pedidos "Não Classificados" reduzem esta métrica e devem ser revistos manualmente.</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">Este medidor representa a assertividade do modelo, indicando a porcentagem de pedidos classificados com alta confiança (baseado em regras contextuais ou palavras-chave). A meta é estar acima de 80%. Classificações com baixa confiança (padrão) reduzem esta métrica e devem ser revisadas com mais atenção.</p>
+                                    <p id="assertiveness-rationale" class="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono"></p>
                                 </div>
                             </div>
                         </div>
@@ -458,7 +459,7 @@
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Motivo</th>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Qtd.</th>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">% Total</th>
-                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
+                                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
                                             </tr>
                                         </thead>
                                         <tbody id="ranking-table-body" class="bg-gray-50 dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700"></tbody>
@@ -898,17 +899,19 @@
                         const firstRow = dtmRows[0] || {};
                         const carrier = firstRow.TRANSPORTADORA || 'N/A';
                         const serviceLevel = firstRow.NIVEL_SERVICO || 'N/A';
-                        let statusFinal, classificationReason = 'N/A';
+                        let statusFinal, classificationReason = 'N/A', classificationMethod = 'unclassified';
 
                         if (learnedClassifications[dtm]) {
                             statusFinal = learnedClassifications[dtm];
                             classificationReason = 'Classificação manual prévia (aprendida).';
+                            classificationMethod = 'learned';
                         } else {
                             const hasMessages = dtmRows.some(row => row.MENSAGEM && String(row.MENSAGEM).trim() !== '');
 
                             if (!hasMessages) {
                                 statusFinal = "Sem Diligenciamento";
                                 classificationReason = "Nenhuma mensagem de diligenciamento encontrada.";
+                                classificationMethod = 'no_messages';
                             } else {
                                 const lastMessage = dtmRows[dtmRows.length - 1];
                                 const lastMessageText = limparTexto(lastMessage.MENSAGEM || '');
@@ -919,27 +922,45 @@
                                 if (!hasCarrierResponse) {
                                     statusFinal = "Sem justificativa";
                                     classificationReason = "Pedido possui apenas mensagens da Petrobras, sem resposta da transportadora.";
+                                    classificationMethod = 'contextual_rule';
                                 } else if (isLastFromCarrier && ['entregue', 'entrega realizada'].some(k => lastMessageText.includes(k))) {
                                     const contractualDate = parseDate(firstRow.DT_ENTREGA_CONTRATUAL);
                                     const effectiveDate = parseDate(firstRow.DT_ENTREGA_EFETIVA);
                                     if (contractualDate && effectiveDate && effectiveDate > contractualDate) {
                                         statusFinal = 'Atraso operacional da transportadora';
                                         classificationReason = "Entrega confirmada após o prazo.";
+                                        classificationMethod = 'contextual_rule';
                                     }
                                 } else if (isPetrobrasUser && ['temos previsao', 'gentileza atualizar'].some(k => lastMessageText.includes(k))) {
                                      statusFinal = 'Atraso operacional da transportadora';
                                      classificationReason = "Cobrança da Petrobras sem resposta.";
+                                     classificationMethod = 'contextual_rule';
                                 }
                                 
                                 if (!statusFinal) {
                                     const textoCompleto = dtmRows.map(row => limparTexto(row.MENSAGEM || '')).join(' ');
-                                    statusFinal = classificarMensagem(textoCompleto) || analiseProfunda(textoCompleto) || 'Atraso operacional da transportadora';
-                                    if (statusFinal === 'Atraso operacional da transportadora') classificationReason = "Padrão (nenhuma regra específica encontrada).";
-                                    else classificationReason = "Classificado por palavra-chave.";
+                                    const quickClassify = classificarMensagem(textoCompleto);
+                                    
+                                    if (quickClassify) {
+                                        statusFinal = quickClassify;
+                                        classificationReason = "Classificado por palavra-chave.";
+                                        classificationMethod = 'keyword_match';
+                                    } else {
+                                        const deepClassify = analiseProfunda(textoCompleto);
+                                        if(deepClassify){
+                                            statusFinal = deepClassify;
+                                            classificationReason = "Classificado por pontuação de palavras-chave.";
+                                            classificationMethod = 'score_match';
+                                        } else {
+                                             statusFinal = 'Atraso operacional da transportadora';
+                                             classificationReason = "Padrão (nenhuma regra específica ou palavra-chave encontrada).";
+                                             classificationMethod = 'default';
+                                        }
+                                    }
                                 }
                             }
                         }
-                        finalClassification.push({ DTM: dtm, 'Status Final do Pedido': statusFinal, 'Motivo da Classificação': classificationReason, 'TRANSPORTADORA': carrier, 'NIVEL_SERVICO': serviceLevel });
+                        finalClassification.push({ DTM: dtm, 'Status Final do Pedido': statusFinal, 'Motivo da Classificação': classificationReason, 'TRANSPORTADORA': carrier, 'NIVEL_SERVICO': serviceLevel, 'classificationMethod': classificationMethod });
                     }
                     return finalClassification;
                 }
@@ -1167,10 +1188,10 @@
                 
                 function updateDashboard() {
                     const totalCount = finalResults.length;
-                    const unclassifiedCount = finalResults.filter(r => r['Status Final do Pedido'] === 'Não Classificado').length;
+                    const defaultCount = finalResults.filter(r => r.classificationMethod === 'default').length;
                     
                     if (totalCount > 0) {
-                        const assertiveness = ((totalCount - unclassifiedCount) / totalCount) * 100;
+                        const assertiveness = ((totalCount - defaultCount) / totalCount) * 100;
                         if (assertivenessGauge) {
                             assertivenessGauge.refresh(assertiveness);
                         } else {
@@ -1179,6 +1200,10 @@
                                 decimals: 2, customSectors: [{ color: '#ef4444', lo: 0, hi: 49.99 }, { color: '#f59e0b', lo: 50, hi: 79.99 }, { color: '#22c55e', lo: 80, hi: 100 }],
                                 counter: true, relativeGaugeSize: true
                             });
+                        }
+                         const rationaleElement = document.getElementById('assertiveness-rationale');
+                        if (rationaleElement) {
+                            rationaleElement.innerHTML = `<strong>Cálculo:</strong> (${totalCount} Total - ${defaultCount} Padrão) / ${totalCount} Total = <strong>${assertiveness.toFixed(2)}%</strong>`;
                         }
                         unclassifiedSummary.classList.remove('hidden');
                     } else {
@@ -1189,7 +1214,7 @@
                     updateAnalysisSummary();
                 }
 
-                function applyFiltersAndRedraw() {
+                function applyFiltersAndRedraw(motivoToReopen = null) {
                     const selectedCarrier = carrierFilter.value;
                     const selectedServiceLevel = serviceLevelFilter.value;
                     const selectedMotivo = filterSelect.value;
@@ -1201,7 +1226,15 @@
                          const dtmData = rawSheetData.find(row => String(row.DTM) === String(item.DTM)) || {};
                          const diff = calculateDateDifference(dtmData.DT_ENTREGA_CONTRATUAL, dtmData.DT_ENTREGA_EFETIVA, dtmData.NIVEL_SERVICO);
                          
-                         const deliveryMatch = (selectedDeliveryStatus === 'all') || (selectedDeliveryStatus === 'on-time' && !diff.text.includes('atraso')) || (selectedDeliveryStatus === 'late' && diff.text.includes('atraso'));
+                         let isLate = diff.text.includes('atraso');
+                         if (item['Status Final do Pedido'] === 'Sem Diligenciamento' && !dtmData.DT_COLETA_EFETIVA && !dtmData.DT_ENTREGA_EFETIVA) {
+                            isLate = true;
+                         }
+
+                         const deliveryMatch = (selectedDeliveryStatus === 'all') ||
+                                               (selectedDeliveryStatus === 'on-time' && !isLate) ||
+                                               (selectedDeliveryStatus === 'late' && isLate);
+
                          const analyzedMatch = (selectedAnalyzed === 'all') || (selectedAnalyzed === 'analyzed' && analyzedStatus[item.DTM]) || (selectedAnalyzed === 'not-analyzed' && !analyzedStatus[item.DTM]);
                          const carrierMatch = selectedCarrier === 'all' || item.TRANSPORTADORA === selectedCarrier;
                          const serviceLevelMatch = selectedServiceLevel === 'all' || item.NIVEL_SERVICO === selectedServiceLevel;
@@ -1217,6 +1250,15 @@
                     createDelayDistributionChart(currentFilteredData);
                     createServiceLevelChart(currentFilteredData);
                     clearChartFilterBtn.classList.toggle('hidden', filterSelect.value === 'all');
+
+                    if (motivoToReopen) {
+                        setTimeout(() => {
+                            const buttonToClick = rankingTableBody.querySelector(`button.expand-details-btn[data-motivo="${motivoToReopen}"]`);
+                            if (buttonToClick) {
+                                buttonToClick.click();
+                            }
+                        }, 50);
+                    }
                 }
 
                 function populateFilters() {
@@ -1246,50 +1288,55 @@
                 function displayRankingTable(rankingData) {
                      rankingTableBody.innerHTML = '';
                      rankingData.forEach(item => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">${item.motivo}</td>
-                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${item.quantidade}</td>
-                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${(item.percentage * 100).toFixed(2)}%</td>
-                            <td class="px-6 py-4 text-sm font-medium"><button class="expand-details-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" data-motivo="${item.motivo}">Ver Detalhes</button></td>
-                        `;
-                        const detailsRow = document.createElement('tr');
-                        detailsRow.classList.add('details-row', 'hidden');
-                        detailsRow.dataset.detailsFor = item.motivo;
-                        detailsRow.innerHTML = `<td colspan="4" class="p-0"></td>`;
-                        rankingTableBody.appendChild(tr);
-                        rankingTableBody.appendChild(detailsRow);
-                     });
+                         const tr = document.createElement('tr');
+                         tr.innerHTML = `
+                             <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">${item.motivo}</td>
+                             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${item.quantidade}</td>
+                             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${(item.percentage * 100).toFixed(2)}%</td>
+                             <td class="px-6 py-4 text-sm font-medium text-center">
+                                 <button class="expand-details-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center justify-center" data-motivo="${item.motivo}" title="Ver Detalhes">
+                                    <svg class="w-5 h-5 transition-transform text-gray-500 dark:text-gray-400 chevron-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                                 </button>
+                             </td>
+                         `;
+                         const detailsRow = document.createElement('tr');
+                         detailsRow.classList.add('details-row', 'hidden');
+                         detailsRow.dataset.detailsFor = item.motivo;
+                         detailsRow.innerHTML = `<td colspan="4" class="p-0"></td>`;
+                         rankingTableBody.appendChild(tr);
+                         rankingTableBody.appendChild(detailsRow);
+                      });
                 }
                  function formatarData(dataString) {
-                    if (!dataString || typeof dataString !== 'string') return 'Data indisponível';
-                    const [data, hora] = dataString.split(' ');
-                    if (!data || !hora) return dataString;
-                    const [ano, mes, dia] = data.split('-');
-                    const [h, m] = hora.split(':');
-                    if(!dia || !mes || !ano || !h || !m) return dataString;
-                    return `${dia}/${mes}/${ano} ${h}:${m}`;
-                }
-                function formatarDataSimples(dateInput) {
-                    const date = parseDate(dateInput);
-                    if (!date) return 'N/A';
-                    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-                }
-                function formatarDataCompleta(dateInput) {
-                    const date = parseDate(dateInput);
-                    if (!date) return 'N/A';
-                    return `${formatarDataSimples(date)} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-                }
-                function handleReclassification(dtm, newMotivo) {
-                    learnedClassifications = loadCorrections();
-                    learnedClassifications[dtm] = newMotivo;
-                    localStorage.setItem('userCorrections', JSON.stringify(learnedClassifications));
-                    const resultIndex = finalResults.findIndex(r => r.DTM == dtm);
-                    if (resultIndex > -1) {
-                        finalResults[resultIndex]['Status Final do Pedido'] = newMotivo;
-                    }
-                    applyFiltersAndRedraw();
-                }
+                     if (!dataString || typeof dataString !== 'string') return 'Data indisponível';
+                     const [data, hora] = dataString.split(' ');
+                     if (!data || !hora) return dataString;
+                     const [ano, mes, dia] = data.split('-');
+                     const [h, m] = hora.split(':');
+                     if(!dia || !mes || !ano || !h || !m) return dataString;
+                     return `${dia}/${mes}/${ano} ${h}:${m}`;
+                 }
+                 function formatarDataSimples(dateInput) {
+                     const date = parseDate(dateInput);
+                     if (!date) return 'N/A';
+                     return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+                 }
+                 function formatarDataCompleta(dateInput) {
+                     const date = parseDate(dateInput);
+                     if (!date) return 'N/A';
+                     return `${formatarDataSimples(date)} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                 }
+                 function handleReclassification(dtm, newMotivo, motivoToReopen = null) {
+                     learnedClassifications = loadCorrections();
+                     learnedClassifications[dtm] = newMotivo;
+                     localStorage.setItem('userCorrections', JSON.stringify(learnedClassifications));
+                     const resultIndex = finalResults.findIndex(r => r.DTM == dtm);
+                     if (resultIndex > -1) {
+                         finalResults[resultIndex]['Status Final do Pedido'] = newMotivo;
+                         finalResults[resultIndex]['Motivo da Classificação'] = 'Reclassificação manual.';
+                     }
+                     applyFiltersAndRedraw(motivoToReopen);
+                 }
 
                 // --- Event Listeners do Analisador ---
                 fileInput.addEventListener('change', () => fileInput.files.length && handleFile(fileInput.files[0]));
@@ -1335,7 +1382,7 @@
                 });
                 
                 [carrierFilter, serviceLevelFilter, filterSelect, analyzedFilter, deliveryStatusFilter].forEach(filter => {
-                    filter.addEventListener('change', applyFiltersAndRedraw);
+                    filter.addEventListener('change', () => applyFiltersAndRedraw());
                 });
                 clearChartFilterBtn.addEventListener('click', () => { filterSelect.value = 'all'; applyFiltersAndRedraw(); });
 
@@ -1396,14 +1443,14 @@
                  chartModalOverlay.addEventListener('click', () => { if(paretoChartExpandedInstance) paretoChartExpandedInstance.destroy(); chartModal.classList.add('hidden'); chartModalOverlay.classList.add('hidden'); });
 
                  exportHistoryBtn.addEventListener('click', () => {
-                    const historyData = { corrections: loadCorrections(), analyzed: loadAnalyzedStatus() };
-                    const blob = new Blob([JSON.stringify(historyData, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = 'historico_analisador.json';
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    showMessage('Histórico exportado com sucesso!');
+                     const historyData = { corrections: loadCorrections(), analyzed: loadAnalyzedStatus() };
+                     const blob = new Blob([JSON.stringify(historyData, null, 2)], { type: 'application/json' });
+                     const url = URL.createObjectURL(blob);
+                     const a = document.createElement('a');
+                     a.href = url; a.download = 'historico_analisador.json';
+                     document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                     URL.revokeObjectURL(url);
+                     showMessage('Histórico exportado com sucesso!');
                  });
 
                  importHistoryBtn.addEventListener('click', () => importInput.click());
@@ -1413,18 +1460,18 @@
                      const reader = new FileReader();
                      reader.onload = function(e) {
                          try {
-                            const data = JSON.parse(e.target.result);
-                            if (data && data.corrections && data.analyzed) {
-                                localStorage.setItem('userCorrections', JSON.stringify(data.corrections));
-                                localStorage.setItem('userAnalyzedStatus', JSON.stringify(data.analyzed));
-                                showMessage('Histórico importado com sucesso!');
-                                if (finalResults.length > 0) {
-                                    finalResults = processData(rawSheetData);
-                                    updateDashboard();
-                                }
-                            } else {
-                                showMessage('Arquivo de histórico inválido.', true);
-                            }
+                             const data = JSON.parse(e.target.result);
+                             if (data && data.corrections && data.analyzed) {
+                                 localStorage.setItem('userCorrections', JSON.stringify(data.corrections));
+                                 localStorage.setItem('userAnalyzedStatus', JSON.stringify(data.analyzed));
+                                 showMessage('Histórico importado com sucesso!');
+                                 if (finalResults.length > 0) {
+                                     finalResults = processData(rawSheetData);
+                                     updateDashboard();
+                                 }
+                             } else {
+                                 showMessage('Arquivo de histórico inválido.', true);
+                             }
                          } catch (error) {
                              showMessage('Erro ao ler o arquivo de histórico.', true);
                          } finally {
@@ -1455,14 +1502,47 @@
                     const saveBtn = target.closest('.save-reclassify-btn');
                     const suggestionSimBtn = target.closest('.suggestion-sim-btn');
                     const suggestionNaoBtn = target.closest('.suggestion-nao-btn');
+                    
+                    if (reclassifyBtn) {
+                        e.stopPropagation();
+                        const container = reclassifyBtn.closest('.dtm-details-container');
+                        const formContainer = container.querySelector('.reclassify-form');
+                        
+                        if (formContainer.classList.contains('hidden')) {
+                            const dtm = reclassifyBtn.dataset.dtm;
+                            let selectOptions = ordemPrioridade.map(m => `<option value="${m}">${m}</option>`).join('');
+                            formContainer.innerHTML = `
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                                    <select class="reclassify-select bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-grow">
+                                        <option value="">Selecione um novo motivo...</option>
+                                        ${selectOptions}
+                                    </select>
+                                    <div class="flex items-center gap-2 mt-2 sm:mt-0 flex-shrink-0">
+                                         <button class="save-reclassify-btn text-xs bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700" data-dtm="${dtm}">Salvar</button>
+                                    </div>
+                                </div>
+                            `;
+                            formContainer.classList.remove('hidden');
+                            reclassifyBtn.textContent = 'Cancelar';
+                            reclassifyBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+                            reclassifyBtn.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                        } else {
+                            formContainer.innerHTML = '';
+                            formContainer.classList.add('hidden');
+                            reclassifyBtn.textContent = 'Reclassificar';
+                            reclassifyBtn.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                            reclassifyBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+                        }
+                        return;
+                    }
 
                     if (expandDetailsBtn) {
                         const motivo = expandDetailsBtn.dataset.motivo;
                         const detailsRow = rankingTableBody.querySelector(`tr[data-details-for="${motivo}"]`);
                         const detailsCell = detailsRow.querySelector('td');
-                        const isHidden = detailsRow.classList.contains('hidden');
+                        const wasHidden = detailsRow.classList.contains('hidden');
 
-                        if (isHidden) {
+                        if (wasHidden) {
                             if (detailsCell.innerHTML === '') { 
                                 detailsCell.innerHTML = `<div class="p-4 text-center text-gray-500 dark:text-gray-400">Carregando detalhes...</div>`;
                                 setTimeout(() => {
@@ -1499,7 +1579,7 @@
                                         }
 
                                         detailsHtml += `
-                                            <div class="bg-white dark:bg-gray-800 rounded-md border dark:border-gray-700 shadow-sm">
+                                            <div class="dtm-details-container bg-white dark:bg-gray-800 rounded-md border dark:border-gray-700 shadow-sm">
                                                 <div class="flex justify-between items-center p-3 cursor-pointer dtm-header">
                                                     <h4 class="font-bold text-sm text-gray-800 dark:text-gray-200">Pedido DTM: ${dtm}</h4>
                                                     <div class="flex items-center space-x-3">
@@ -1549,15 +1629,18 @@
                                     detailsCell.innerHTML = dtmsForMotivo.length > 0 ? detailsHtml : '<div class="p-4 text-center text-gray-500 dark:text-gray-400">Nenhum item encontrado para este motivo com os filtros atuais.</div>';
                                 }, 100);
                             }
-                            detailsRow.classList.toggle('hidden');
-                            expandDetailsBtn.textContent = isHidden ? 'Ocultar Detalhes' : 'Ver Detalhes';
                         }
+                        
+                        detailsRow.classList.toggle('hidden');
+                        const isNowVisible = !detailsRow.classList.contains('hidden');
+                        expandDetailsBtn.title = isNowVisible ? 'Ocultar Detalhes' : 'Ver Detalhes';
+                        expandDetailsBtn.querySelector('.chevron-icon').classList.toggle('rotate-180', isNowVisible);
                         return;
                     }
 
                     if (dtmHeader) {
-                         if (target.closest('button') || target.closest('label') || target.closest('input')) return;
-                        const container = dtmHeader.closest('div.bg-white');
+                        if (target.closest('button') || target.closest('label') || target.closest('input')) return;
+                        const container = dtmHeader.closest('.dtm-details-container');
                         const messagesContainer = container.querySelector('.messages-container');
                         const icon = container.querySelector('.chevron-icon');
                         
@@ -1591,46 +1674,24 @@
                         return;
                     }
 
-                    if (reclassifyBtn) {
-                        e.stopPropagation();
-                        const container = reclassifyBtn.closest('.dtm-header').parentElement;
-                        const formContainer = container.querySelector('.reclassify-form');
-                        
-                        if (formContainer.classList.contains('hidden')) {
-                            const dtm = reclassifyBtn.dataset.dtm;
-                            let selectOptions = ordemPrioridade.map(m => `<option value="${m}">${m}</option>`).join('');
-                            formContainer.innerHTML = `
-                                <select class="reclassify-select bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                    <option value="">Selecione um novo motivo...</option>
-                                    ${selectOptions}
-                                </select>
-                                <button class="save-reclassify-btn mt-2 text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700" data-dtm="${dtm}">Salvar</button>
-                            `;
-                            formContainer.classList.remove('hidden');
-                        } else {
-                            formContainer.innerHTML = '';
-                            formContainer.classList.add('hidden');
-                        }
-                        return;
-                    }
                     
                     if (saveBtn) {
                         const dtm = saveBtn.dataset.dtm;
-                        const newMotivo = saveBtn.previousElementSibling.value;
+                        const formContainer = saveBtn.closest('.reclassify-form');
+                        const newMotivo = formContainer.querySelector('.reclassify-select').value;
+                        const openMotivo = saveBtn.closest('.details-row').dataset.detailsFor;
+                        
                         if (newMotivo) {
-                            handleReclassification(dtm, newMotivo);
+                            handleReclassification(dtm, newMotivo, openMotivo);
                         }
-                        const formContainer = saveBtn.parentElement;
-                        formContainer.innerHTML = '';
-                        formContainer.classList.add('hidden');
                         return;
                     }
                     
                     if (suggestionSimBtn) {
                         const dtm = suggestionSimBtn.dataset.dtm;
                         const suggestion = suggestionSimBtn.dataset.suggestion;
-                        handleReclassification(dtm, suggestion);
-                        suggestionSimBtn.closest('.suggestion-box').innerHTML = '<p class="text-xs font-semibold text-green-600">Classificação aplicada e aprendida!</p>';
+                        const openMotivo = suggestionSimBtn.closest('.details-row').dataset.detailsFor;
+                        handleReclassification(dtm, suggestion, openMotivo);
                         return;
                     }
                     
@@ -1639,7 +1700,7 @@
                         return;
                     }
                 });
-                 
+                
             })(); 
         });
     </script>
