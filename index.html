@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intranet TTON - Login</title>
+    <title>Intranet TTON</title>
     <!-- Carrega o Tailwind CSS para estilização moderna e responsiva -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -13,6 +13,12 @@
             darkMode: 'class',
         }
     </script>
+    <!-- Bibliotecas para o Analisador de Diligenciamento -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/justgage@1.4.0/justgage.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
@@ -41,6 +47,7 @@
             left: 0;
             width: 100%;
             height: 100%;
+            border: 0;
         }
         /* Estilo para o container do painel em tela cheia */
         #panel-iframe-container:fullscreen {
@@ -55,6 +62,68 @@
         }
         .collapsible-content {
             transition: max-height 0.3s ease-out;
+        }
+
+        /* Estilos para o Analisador */
+        html.dark {
+            color-scheme: dark;
+        }
+        .drop-zone {
+            border: 2px dashed #cbd5e1;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        html.dark .drop-zone {
+            border-color: #4b5563;
+        }
+        .drop-zone--over {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+        }
+        html.dark .drop-zone--over {
+            border-color: #3b82f6;
+            background-color: #1f2937;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        #modal-content::-webkit-scrollbar, #chart-modal-content::-webkit-scrollbar, .details-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        #modal-content::-webkit-scrollbar-track, #chart-modal-content::-webkit-scrollbar-track, .details-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        html.dark #modal-content::-webkit-scrollbar-track, html.dark #chart-modal-content::-webkit-scrollbar-track, html.dark .details-content::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+        #modal-content::-webkit-scrollbar-thumb, #chart-modal-content::-webkit-scrollbar-thumb, .details-content::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        #modal-content::-webkit-scrollbar-thumb:hover, #chart-modal-content::-webkit-scrollbar-thumb:hover, .details-content::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .details-row.hidden {
+            display: none;
+        }
+        .chevron-icon.rotate-180 {
+            transform: rotate(180deg);
+        }
+        #assertiveness-gauge {
+            width: 200px;
+            height: 160px;
+            margin: 0 auto;
+        }
+        html.dark #assertiveness-gauge tspan {
+            fill: #e5e7eb;
+        }
+        /* Correção da cor da fonte do medidor para o modo claro */
+        html:not(.dark) #assertiveness-gauge tspan {
+            fill: #1f2937;
         }
     </style>
 </head>
@@ -117,7 +186,7 @@
                         <p id="current-time" class="text-2xl font-bold"></p>
                     </div>
                     <!-- Botão de alternância de tema -->
-                    <button id="theme-toggle" type="button" class="text-white hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                    <button id="theme-toggle-btn" type="button" class="text-white hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-gray-700 rounded-lg text-sm p-2.5">
                         <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
                         <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
                     </button>
@@ -142,7 +211,7 @@
                 <!-- Contêiner Flex para as seções -->
                 <div class="flex flex-col lg:flex-row lg:space-x-6">
 
-                    <!-- Seção de Acesso aos Painéis -->
+                    <!-- Coluna da Esquerda: Painéis -->
                     <section class="mb-8 p-6 bg-gray-200 dark:bg-gray-800 rounded-xl lg:w-1/2">
                         <h2 class="text-2xl font-bold text-white mb-4 bg-[#009144] p-4 rounded-xl text-center">Painéis de Acompanhamento 📊</h2>
                         <div class="flex flex-col space-y-4">
@@ -217,7 +286,25 @@
                         </div>
                     </section>
                     
+                    <!-- Coluna da Direita: Ferramentas, Documentos e Links -->
                     <div class="lg:w-1/2 flex flex-col space-y-8">
+
+                        <!-- NOVA SEÇÃO: Ferramentas -->
+                        <section class="p-6 bg-gray-200 dark:bg-gray-800 rounded-xl">
+                            <h2 class="text-2xl font-bold text-white mb-4 bg-[#009144] p-4 rounded-xl text-center">Ferramentas 🛠️</h2>
+                            <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-md">
+                                <ul class="space-y-4">
+                                    <!-- Link para a nova ferramenta -->
+                                    <a href="#" id="open-analyzer-link" class="bg-gray-50 dark:bg-gray-600 p-4 rounded-xl hover:bg-[#009144] dark:hover:bg-[#007A38] hover:shadow-md transition-all duration-300 transform hover:scale-105 group flex items-center space-x-4 cursor-pointer">
+                                        <div class="w-8 h-8 flex items-center justify-center text-[#FFD100] group-hover:text-white flex-shrink-0">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-search-2"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v3"/><path d="M14 2v6h6"/><circle cx="11.5" cy="16.5" r="2.5"/><path d="m13.3 18.3 1.2 1.2"/></svg>
+                                        </div>
+                                        <span class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-white">Analisador de Diligenciamento</span>
+                                    </a>
+                                </ul>
+                            </div>
+                        </section>
+
                         <!-- Seção de Documentos Úteis -->
                         <section class="p-6 bg-gray-200 dark:bg-gray-800 rounded-xl">
                             <h2 class="text-2xl font-bold text-white mb-4 bg-[#009144] p-4 rounded-xl text-center">Documentos 📂</h2>
@@ -263,6 +350,220 @@
                     </div>
                 </div>
             </div>
+
+            <!-- NOVA VISUALIZAÇÃO: ANALISADOR (escondido por padrão) -->
+            <div id="analyzer-view" class="hidden">
+                 <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-[#009144]">Analisador de Diligenciamento</h2>
+                    <button id="close-analyzer-btn" class="bg-gray-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-gray-600 transition-colors duration-300">Voltar à Home</button>
+                </div>
+                
+                <!-- Conteúdo do Analisador colado aqui -->
+                <div class="w-full bg-gray-50 dark:bg-gray-900 rounded-xl shadow-lg p-6 md:p-8">
+                    <!-- Área de Upload -->
+                    <div id="upload-area">
+                        <div id="drop-zone" class="drop-zone w-full p-8 md:p-12 text-center rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <input type="file" id="file-input" class="hidden" accept=".xlsx, .xls">
+                            <div class="flex flex-col items-center">
+                                <svg class="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                                </svg>
+                                <p class="text-gray-700 dark:text-gray-300 font-medium">Arraste e solte sua planilha (.xlsx) aqui</p>
+                                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">ou</p>
+                                <label for="file-input" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md font-semibold text-sm hover:bg-blue-700 transition cursor-pointer">
+                                    Selecione o arquivo
+                                </label>
+                                <p id="file-name" class="text-sm text-green-600 dark:text-green-400 mt-4 font-medium"></p>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
+                            <button id="process-button" class="w-full sm:w-auto bg-gray-800 dark:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-900 dark:hover:bg-blue-500 transition disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                                Processar Planilha
+                            </button>
+                            <button id="import-history-btn" class="w-full sm:w-auto bg-gray-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-700 transition">Importar Histórico</button>
+                        </div>
+                    </div>
+
+                    <!-- Área de Carregamento (Spinner) -->
+                    <div id="loading-area" class="hidden text-center py-12">
+                        <div class="spinner w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+                        <p class="mt-4 text-gray-600 dark:text-gray-400 font-medium">Analisando mensagens e classificando pedidos...</p>
+                    </div>
+
+                    <!-- Área de Resultados -->
+                    <div id="results-area" class="hidden">
+                        <div class="text-center">
+                            <h2 class="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">Análise Concluída!</h2>
+                            <p class="text-gray-600 dark:text-gray-400 mt-2">O ranking de motivos e o gráfico de Pareto foram gerados.</p>
+                        </div>
+                         <div id="analysis-summary" class="hidden mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                            <div class="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-lg">
+                                <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300">Total de Pedidos</h4>
+                                <p id="summary-total" class="text-2xl font-bold text-blue-900 dark:text-blue-200">0</p>
+                            </div>
+                            <div class="bg-green-100 dark:bg-green-900/30 p-4 rounded-lg">
+                                <h4 class="text-sm font-semibold text-green-800 dark:text-green-300">Analisados</h4>
+                                <p id="summary-analyzed" class="text-2xl font-bold text-green-900 dark:text-green-200">0</p>
+                            </div>
+                            <div class="bg-yellow-100 dark:bg-yellow-900/30 p-4 rounded-lg">
+                                <h4 class="text-sm font-semibold text-yellow-800 dark:text-yellow-300">Não Analisados</h4>
+                                <p id="summary-not-analyzed" class="text-2xl font-bold text-yellow-900 dark:text-yellow-200">0</p>
+                            </div>
+                        </div>
+                        <div id="unclassified-summary" class="hidden mt-8 p-4 border border-gray-200 bg-white dark:bg-gray-800/20 dark:border-gray-700 rounded-lg">
+                            <div class="flex flex-col md:flex-row justify-center items-center text-center">
+                                <div id="assertiveness-gauge-container" class="w-full md:w-1/3">
+                                     <div id="assertiveness-gauge"></div>
+                                </div>
+                                <div class="w-full md:w-2/3 mt-4 md:mt-0 md:ml-6">
+                                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Assertividade do Modelo</h3>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">Este medidor representa a percentagem de pedidos que foram classificados automaticamente com sucesso. A meta é estar acima de 80%. Pedidos "Não Classificados" reduzem esta métrica e devem ser revistos manualmente.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="dashboard-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                            <div id="ranking-container" class="bg-white dark:bg-slate-800/50 p-6 rounded-xl shadow-lg">
+                                <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
+                                    <h3 class="text-lg font-semibold dark:text-white">Ranking de Motivos</h3>
+                                    <div class="flex items-center gap-2">
+                                         <div id="total-count-display" class="text-sm font-semibold bg-gray-100 text-gray-800 px-3 py-2 rounded-full dark:bg-gray-700 dark:text-gray-200 whitespace-nowrap"></div>
+                                         <button id="toggle-chart-btn" title="Ocultar Gráfico" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition flex-shrink-0">
+                                            <svg id="toggle-chart-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                 <div class="flex flex-wrap items-center gap-2 mb-4">
+                                    <select id="delivery-status-filter" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-auto p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                        <option value="all">Todos os Pedidos</option>
+                                        <option value="on-time">No Prazo</option>
+                                        <option value="late">Fora do Prazo</option>
+                                    </select>
+                                    <select id="analyzed-filter" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-auto p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                        <option value="all">Todos os Status</option>
+                                        <option value="analyzed">Analisados</option>
+                                        <option value="not-analyzed">Não Analisados</option>
+                                    </select>
+                                    <select id="carrier-filter" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-auto p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                        <option value="all">Todas Transportadoras</option>
+                                    </select>
+                                    <select id="service-level-filter" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-auto p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                        <option value="all">Todos Níveis de Serviço</option>
+                                    </select>
+                                    <select id="filter-select" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-auto p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"></select>
+                                </div>
+                                <div class="overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg max-h-[500px]">
+                                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead class="bg-white dark:bg-gray-700 sticky top-0">
+                                            <tr>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Motivo</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Qtd.</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">% Total</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ranking-table-body" class="bg-gray-50 dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="chart-container" class="bg-white dark:bg-slate-800/50 p-6 rounded-xl shadow-lg">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-lg font-semibold dark:text-white">Gráfico de Pareto</h3>
+                                        <button id="clear-chart-filter-btn" class="hidden text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Limpar Filtro</button>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button id="expand-chart-btn" title="Expandir Gráfico" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="p-4 rounded-lg h-[500px] bg-white dark:bg-black/20">
+                                     <canvas id="pareto-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="additional-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                            <div id="delay-pareto-container" class="bg-white dark:bg-slate-800/50 p-6 rounded-xl shadow-lg">
+                                <h3 class="text-lg font-semibold dark:text-white mb-4">Distribuição de Dias em Atraso</h3>
+                                <div class="p-4 rounded-lg h-[400px] bg-white dark:bg-black/20">
+                                     <canvas id="delay-distribution-chart"></canvas>
+                                </div>
+                            </div>
+                            <div id="service-level-container" class="bg-white dark:bg-slate-800/50 p-6 rounded-xl shadow-lg">
+                                 <h3 class="text-lg font-semibold dark:text-white mb-4">Atrasos por Nível de Serviço</h3>
+                                <div class="p-4 rounded-lg h-[400px] bg-white dark:bg-black/20">
+                                     <canvas id="service-level-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-8 border-t dark:border-gray-700 pt-8 flex flex-wrap justify-center items-center gap-4">
+                            <button id="download-button" class="w-full sm:w-auto bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition">Download do Relatório</button>
+                            <button id="show-logic-btn" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition">Ver Lógica</button>
+                            <button id="export-history-btn" class="w-full sm:w-auto bg-gray-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-700 transition">Exportar Histórico</button>
+                            <button id="restart-button" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-3 px-8 rounded-lg hover:bg-gray-300 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 transition">Analisar Outra</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal da Documentação -->
+                <div id="logic-modal-overlay" class="fixed inset-0 bg-black bg-opacity-60 hidden z-40"></div>
+                <div id="logic-modal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-11/12 max-w-4xl hidden z-50">
+                    <div class="flex justify-between items-center p-6 border-b dark:border-gray-700">
+                        <h2 class="text-xl font-bold dark:text-white">Lógica de Classificação e Aprendizado</h2>
+                        <button id="logic-modal-close-btn" class="text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white text-3xl leading-none">&times;</button>
+                    </div>
+                    <div id="modal-content" class="p-6 max-h-[70vh] overflow-y-auto">
+                        <p class="mb-4 text-gray-700 dark:text-gray-300">A análise classifica cada pedido através de um processo de múltiplas etapas para maximizar a precisão:</p>
+                        <ol class="list-decimal list-inside space-y-2 mb-4 text-gray-700 dark:text-gray-300">
+                            <li><strong>Análise Contextual Prioritária:</strong> O sistema primeiro verifica cenários específicos, como cobranças da Petrobras sem resposta, entregas confirmadas com atraso, ou status de "captação de veículo", aplicando a classificação correspondente imediatamente.</li>
+                            <li><strong>Análise Rápida por Palavra-chave:</strong> Se nenhuma regra contextual se aplica, o sistema busca por correspondências diretas de palavras-chave para uma classificação rápida.</li>
+                            <li><strong>Análise Profunda por Pontuação:</strong> Se ainda não classificado, o sistema realiza uma análise de pontuação, contando a frequência de palavras-chave para cada motivo e selecionando a categoria mais provável.</li>
+                        </ol>
+                        <p class="mb-4 text-gray-700 dark:text-gray-300"><strong>Aprendizado Contínuo:</strong> Suas correções manuais (reclassificações) são a parte mais importante. Elas são salvas no seu navegador e usadas para refinar o modelo. Com o tempo, o sistema se torna mais preciso e adaptado aos padrões dos seus dados, melhorando o percentual de assertividade e reduzindo a necessidade de intervenção manual.</p>
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border dark:border-gray-600">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Motivo (Causa)</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Descrição da Lógica / Palavras-Chave</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                <tr><td class="px-4 py-2 font-semibold">Sem justificativa</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">Aplicado quando um pedido possui mensagens, mas nenhuma delas é da transportadora.</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Pendência fiscal</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">fiscal, sefaz, liberacao fiscal, retida na sefaz, impostos pendentes, fiscalizacao</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Material recusado</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">recusado, devolvido a origem, devolver a mercadoria, recusa, recusou o material</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Atraso operacional da transportadora</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">atraso, atrasada, sem previsao, cliente cobrando, nao cumprimento do prazo, atraso na entrega, atraso de coleta, ro aberto, falha na prestacao de servico, extravio, em transferencia. Também aplicado em cobranças da Petrobras sem resposta ou entregas confirmadas após o prazo.</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Falha do solicitante</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">divergencia, divergente, dtm errado, nf errada, endereco incorreto, ajustar o dtm, cancelamento desta dtm</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Atraso na liberação do material (Origem)</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">aguardando liberacao, material nao disponibilizado, nao liberado pela origem, sem retorno da origem, falta de retorno, pendentes do volume, questionada a liberacao</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Indisponibilidade do destino para recebimento</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">nao querem receber, destino nao recebe, fechamento das vias, greve no local, recusou o recebimento, nao teve operacao na refinaria</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Falha na cubagem do veículo</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">nao coube no veiculo, veiculo inadequado, limitacao de espaco, veiculo enviado, dimensoes especificadas</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Captação de Veículo</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">captação de veículo, captacao de veiculo</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Dificuldade de contato na origem</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">dificuldade de contato, sem sucesso, nao atende, contato sem sucesso, nao obtive retorno, ninguem atendeu</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Local fechado</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">local fechado, nao estava aberto, fora de horario, encerrado o expediente, nao houve expediente</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Falta de equipamento para carga ou descarga</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">munck, empilhadeira, sem equipamento, operacao manual</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Atraso/longos tempos de espera para carga ou descarga</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">aguardando carregamento, espera para carga, longos tempos</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Atraso no transporte aéreo</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">companhia aerea, voo, embarque, corte de carga, alocacao de voo, sem manifesto de embarque, voo cargueiro</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Falha na unitização do material</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">embalagem, soltos, sem estar confeccionado, cantoneiras, avaria, danificado</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Falha na programação</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">programacao, reprogramado, reagendada, coleta fixa</td></tr>
+                                <tr><td class="px-4 py-2 font-semibold">Agendamento</td><td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">agendamento, agendado para, agendada para, programacao de entrega</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="chart-modal-overlay" class="fixed inset-0 bg-black bg-opacity-80 hidden z-40"></div>
+                <div id="chart-modal" class="fixed inset-5 bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 hidden z-50 flex flex-col">
+                    <div class="flex justify-between items-center pb-4 border-b dark:border-gray-700">
+                        <h2 class="text-xl font-bold dark:text-white">Gráfico de Pareto - Análise de Motivos</h2>
+                        <button id="chart-modal-close-btn" class="text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white text-3xl leading-none">&times;</button>
+                    </div>
+                    <div id="chart-modal-content" class="flex-grow pt-4">
+                         <canvas id="pareto-chart-expanded"></canvas>
+                    </div>
+                </div>
+                <input type="file" id="import-input" class="hidden" accept=".json">
+                <div id="message-box" class="fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg hidden transition-opacity duration-300 z-50">
+                    <p id="message-text"></p>
+                </div>
+            </div>
             
             <!-- Container do Iframe do Painel (escondido por padrão) -->
             <div id="panel-iframe-container" class="hidden">
@@ -276,7 +577,7 @@
                     </div>
                 </div>
                 <div class="iframe-container bg-white dark:bg-gray-800 rounded-xl shadow-md p-2">
-                    <iframe id="panel-iframe" src="" frameborder="0" allowfullscreen="true"></iframe>
+                    <iframe id="panel-iframe" src="" allowfullscreen="true"></iframe>
                 </div>
             </div>
 
@@ -293,11 +594,10 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- INÍCIO: LÓGICA DO MODO NOTURNO ---
-            const themeToggleBtn = document.getElementById('theme-toggle');
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
             const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
             const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
 
-            // Função para aplicar o tema (claro ou escuro)
             const applyTheme = (theme) => {
                 if (theme === 'dark') {
                     document.documentElement.classList.add('dark');
@@ -308,13 +608,12 @@
                     themeToggleDarkIcon.classList.remove('hidden');
                     themeToggleLightIcon.classList.add('hidden');
                 }
+                document.documentElement.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme } }));
             };
 
-            // Verifica a preferência de tema do usuário no localStorage ou no sistema operacional
             const currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             applyTheme(currentTheme);
 
-            // Adiciona o evento de clique ao botão de alternância de tema
             themeToggleBtn.addEventListener('click', () => {
                 const isDarkMode = document.documentElement.classList.contains('dark');
                 const newTheme = isDarkMode ? 'light' : 'dark';
@@ -323,19 +622,14 @@
             });
             // --- FIM: LÓGICA DO MODO NOTURNO ---
 
-            // Elementos de Login
+            // --- Elementos Comuns ---
             const loginForm = document.getElementById('login-form');
             const loginContainer = document.getElementById('login-container');
             const intranetContent = document.getElementById('intranet-content');
             const errorMessage = document.getElementById('error-message');
-            
-            // Elementos de Data e Hora
             const dateElement = document.getElementById('current-date');
             const timeElement = document.getElementById('current-time');
-            
             const body = document.querySelector('body');
-
-            // --- INÍCIO: LÓGICA DE VISUALIZAÇÃO DOS PAINÉIS ---
             const homeView = document.getElementById('home-view');
             const panelIframeContainer = document.getElementById('panel-iframe-container');
             const panelIframe = document.getElementById('panel-iframe');
@@ -344,94 +638,84 @@
             const panelLinks = document.querySelectorAll('.panel-link');
             const fullscreenBtn = document.getElementById('fullscreen-btn');
             const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
-
+            const openAnalyzerLink = document.getElementById('open-analyzer-link');
+            const analyzerView = document.getElementById('analyzer-view');
+            const closeAnalyzerBtn = document.getElementById('close-analyzer-btn');
+            const logoutBtn = document.getElementById('logout-btn');
             const enterFullscreenIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
             const exitFullscreenIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
 
+            // --- Lógica de Navegação Principal ---
             collapsibleHeaders.forEach(header => {
                 header.addEventListener('click', () => {
-                    const content = header.nextElementSibling;
-                    const icon = header.querySelector('svg');
-                    content.classList.toggle('hidden');
-                    icon.classList.toggle('rotate-180');
+                    header.nextElementSibling.classList.toggle('hidden');
+                    header.querySelector('svg').classList.toggle('rotate-180');
                 });
             });
 
             panelLinks.forEach(link => {
                 link.addEventListener('click', (e) => {
-                    e.preventDefault(); 
-                    const url = link.href;
-                    const title = link.querySelector('span').textContent;
-                    panelTitle.textContent = title;
-                    panelIframe.src = url;
+                    e.preventDefault();
+                    panelTitle.textContent = link.querySelector('span')?.textContent || link.textContent.trim();
+                    panelIframe.src = link.href;
                     homeView.classList.add('hidden');
+                    analyzerView.classList.add('hidden');
                     panelIframeContainer.classList.remove('hidden');
                 });
             });
 
             closePanelBtn.addEventListener('click', () => {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen();
-                }
+                if (document.fullscreenElement) document.exitFullscreen();
                 panelIframeContainer.classList.add('hidden');
                 homeView.classList.remove('hidden');
-                panelIframe.src = ''; 
+                panelIframe.src = '';
             });
 
             fullscreenBtn.addEventListener('click', () => {
-                if (!document.fullscreenElement) {
-                    panelIframeContainer.requestFullscreen().catch(err => {
-                        console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-                    });
-                } else {
-                    document.exitFullscreen();
-                }
+                if (!document.fullscreenElement) panelIframeContainer.requestFullscreen().catch(err => console.error(err));
+                else document.exitFullscreen();
             });
 
             document.addEventListener('fullscreenchange', () => {
-                if (document.fullscreenElement) {
-                    fullscreenBtn.innerHTML = exitFullscreenIcon;
-                    fullscreenBtn.title = "Sair da Tela Cheia";
-                } else {
-                    fullscreenBtn.innerHTML = enterFullscreenIcon;
-                    fullscreenBtn.title = "Tela Cheia";
-                }
+                fullscreenBtn.innerHTML = document.fullscreenElement ? exitFullscreenIcon : enterFullscreenIcon;
+                fullscreenBtn.title = document.fullscreenElement ? "Sair da Tela Cheia" : "Tela Cheia";
             });
-            // --- FIM: LÓGICA DE VISUALIZAÇÃO DOS PAINÉIS ---
 
-            // --- LÓGICA DE DATA E HORA ---
-            function updateDateTime() {
+            openAnalyzerLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                homeView.classList.add('hidden');
+                panelIframeContainer.classList.add('hidden');
+                panelIframe.src = '';
+                analyzerView.classList.remove('hidden');
+            });
+
+            closeAnalyzerBtn.addEventListener('click', () => {
+                analyzerView.classList.add('hidden');
+                homeView.classList.remove('hidden');
+            });
+            
+            // --- Lógica de Data/Hora ---
+            (function updateDateTime() {
                 const now = new Date();
                 const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
                 let formattedDate = now.toLocaleDateString('pt-BR', dateOptions);
-                formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
-                const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-                const formattedTime = now.toLocaleTimeString('pt-BR', timeOptions);
-                dateElement.textContent = formattedDate;
-                timeElement.textContent = formattedTime;
-            }
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
+                dateElement.textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+                timeElement.textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+                setTimeout(updateDateTime, 1000);
+            })();
 
-            // --- LÓGICA DE LOGIN ---
-            const logoutBtn = document.getElementById('logout-btn');
-            
+            // --- Lógica de Login ---
             function showMainContent() {
                 body.classList.remove('flex', 'items-center', 'justify-center');
                 loginContainer.style.display = 'none';
                 intranetContent.style.display = 'flex';
             }
 
-            if (localStorage.getItem('isLoggedIn') === 'true') {
-                showMainContent();
-            }
+            if (localStorage.getItem('isLoggedIn') === 'true') showMainContent();
 
             loginForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-
-                if (email.toLowerCase().endsWith('@petrobras.com.br') && password === 'tton2025') {
+                if (document.getElementById('email').value.toLowerCase().endsWith('@petrobras.com.br') && document.getElementById('password').value === 'tton2025') {
                     localStorage.setItem('isLoggedIn', 'true');
                     errorMessage.classList.add('hidden');
                     showMainContent();
@@ -444,7 +728,921 @@
                 localStorage.removeItem('isLoggedIn');
                 window.location.reload();
             });
+
+            // --- SCRIPT DO ANALISADOR DE DILIGENCIAMENTO (IIFE) ---
+            (function() { 
+                Chart.register(ChartDataLabels);
+                // --- Variáveis do Analisador ---
+                const dropZone = document.getElementById('drop-zone');
+                const fileInput = document.getElementById('file-input');
+                const fileNameDisplay = document.getElementById('file-name');
+                const processButton = document.getElementById('process-button');
+                const downloadButton = document.getElementById('download-button');
+                const restartButton = document.getElementById('restart-button');
+                const uploadArea = document.getElementById('upload-area');
+                const loadingArea = document.getElementById('loading-area');
+                const resultsArea = document.getElementById('results-area');
+                const rankingTableBody = document.getElementById('ranking-table-body');
+                const paretoChartCanvas = document.getElementById('pareto-chart');
+                const delayDistributionChartCanvas = document.getElementById('delay-distribution-chart');
+                const serviceLevelChartCanvas = document.getElementById('service-level-chart');
+                const totalCountDisplay = document.getElementById('total-count-display');
+                const expandChartBtn = document.getElementById('expand-chart-btn');
+                const showLogicBtn = document.getElementById('show-logic-btn');
+                const filterSelect = document.getElementById('filter-select');
+                const carrierFilter = document.getElementById('carrier-filter');
+                const serviceLevelFilter = document.getElementById('service-level-filter');
+                const analyzedFilter = document.getElementById('analyzed-filter');
+                const deliveryStatusFilter = document.getElementById('delivery-status-filter');
+                const toggleChartBtn = document.getElementById('toggle-chart-btn');
+                const dashboardGrid = document.getElementById('dashboard-grid');
+                const rankingContainer = document.getElementById('ranking-container');
+                const chartContainer = document.getElementById('chart-container');
+                const unclassifiedSummary = document.getElementById('unclassified-summary');
+                const analysisSummary = document.getElementById('analysis-summary');
+                const exportHistoryBtn = document.getElementById('export-history-btn');
+                const importHistoryBtn = document.getElementById('import-history-btn');
+                const importInput = document.getElementById('import-input');
+                const clearChartFilterBtn = document.getElementById('clear-chart-filter-btn');
+                const logicModal = document.getElementById('logic-modal');
+                const logicModalOverlay = document.getElementById('logic-modal-overlay');
+                const logicModalCloseBtn = document.getElementById('logic-modal-close-btn');
+                const chartModal = document.getElementById('chart-modal');
+                const chartModalOverlay = document.getElementById('chart-modal-overlay');
+                const chartModalCloseBtn = document.getElementById('chart-modal-close-btn');
+                const paretoChartExpandedCanvas = document.getElementById('pareto-chart-expanded');
+
+                let fileData = null, rawSheetData = [], finalResults = [], currentFilteredData = [];
+                let paretoChartInstance, delayDistributionChartInstance, serviceLevelChartInstance, paretoChartExpandedInstance, assertivenessGauge;
+                let learnedClassifications = {};
+                const petrobrasUsers = ["PRISCILA BENEVIDES DOS SANTOS", "LAIS RAMOS ALVES", "ELAINE DE SOUZA SANTOS", "RAISSA BATISTA FRANCELINO", "DAIANE SANTOS", "FLAVIADANTAS.PRESTSERV@PETROBRAS.COM.BR"];
+                const regrasClassificacao = {'Pendência fiscal':['fiscal','sefaz','liberacao fiscal','retida na sefaz','impostos pendentes','fiscalizacao'],'Material recusado':['recusado','devolvido a origem','devolver a mercadoria','recusa','recusou o material'],'Falha do solicitante':['divergencia','divergente','dtm errado','nf errada','endereco incorreto','ajustar o dtm','cancelamento desta dtm'],'Atraso na liberação do material (Origem)':['aguardando liberacao','material nao disponibilizado','nao liberado pela origem','sem retorno da origem','falta de retorno','pendentes do volume','questionada a liberacao'],'Indisponibilidade do destino para recebimento':['nao querem receber','destino nao recebe','fechamento das vias','greve no local','recusou o recebimento','nao teve operacao na refinaria'],'Dificuldade de contato na origem':['dificuldade de contato','sem sucesso','nao atende','contato sem sucesso','nao obtive retorno','ninguem atendeu'],'Atraso operacional da transportadora':['atraso','atrasada','sem previsao','cliente cobrando','nao cumprimento do prazo','atraso na entrega','atraso de coleta','ro aberto','falha na prestacao de servico','extravio','em transferencia'],'Falha na cubagem do veículo':['nao coube no veiculo','veiculo inadequado','limitacao de espaco','veiculo enviado','dimensoes especificadas'],'Captação de Veículo':['captação de veículo','captacao de veiculo'],'Atraso no transporte aéreo':['companhia aerea','voo','embarque','corte de carga','alocacao de voo','sem manifesto de embarque','voo cargueiro'],'Falha na unitização do material':['embalagem','soltos','sem estar confeccionado','cantoneiras','avaria','danificado'],'Falta de equipamento para carga ou descarga':['munck','empilhadeira','sem equipamento','operacao manual'],'Local fechado':['local fechado','nao estava aberto','fora de horario','encerrado o expediente','nao houve expediente'],'Atraso/longos tempos de espera para carga ou descarga':['aguardando carregamento','espera para carga','longos tempos'],'Agendamento':['agendamento','agendado para','agendada para','programacao de entrega'],'Falha na programação':['programacao','reprogramado','reagendada','coleta fixa'],'Sem justificativa':[],};
+                const ordemPrioridade = ['Pendência fiscal','Material recusado','Atraso operacional da transportadora','Sem justificativa','Falha do solicitante','Atraso na liberação do material (Origem)','Indisponibilidade do destino para recebimento','Falha na cubagem do veículo','Captação de Veículo','Dificuldade de contato na origem','Local fechado','Falta de equipamento para carga ou descarga','Atraso/longos tempos de espera para carga ou descarga','Atraso no transporte aéreo','Falha na unitização do material','Falha na programação','Agendamento'];
+
+                // --- Funções de Suporte ---
+                function showMessage(text, isError = false) {
+                    const messageBox = document.getElementById('message-box');
+                    const messageText = document.getElementById('message-text');
+                    messageText.textContent = text;
+                    messageBox.classList.remove('hidden', 'bg-green-500', 'bg-red-500');
+                    messageBox.classList.add(isError ? 'bg-red-500' : 'bg-green-500');
+                    setTimeout(() => messageBox.classList.add('hidden'), 3000);
+                }
+                
+                function handleFile(file) {
+                    fileNameDisplay.textContent = `Arquivo selecionado: ${file.name}`;
+                    const reader = new FileReader();
+                    reader.onload = (event) => { fileData = event.target.result; processButton.disabled = false; };
+                    reader.readAsArrayBuffer(file);
+                }
+
+                function loadCorrections() { return JSON.parse(localStorage.getItem('userCorrections')) || {}; }
+                function loadAnalyzedStatus() { return JSON.parse(localStorage.getItem('userAnalyzedStatus')) || {}; }
+                function saveAnalyzedStatus(status) { localStorage.setItem('userAnalyzedStatus', JSON.stringify(status)); }
+                function limparTexto(texto) { if (typeof texto !== 'string') return ""; let limpo = texto.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').toLowerCase(); limpo = limpo.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); limpo = limpo.replace(/[^a-z0-9\s]/g, ''); return limpo.replace(/\s+/g, ' ').trim(); }
+                
+                function parseDate(dateInput) {
+                    if (!dateInput) return null;
+                    if (dateInput instanceof Date) return dateInput;
+                    if (typeof dateInput === 'number') {
+                        const date = new Date((dateInput - 25569) * 86400 * 1000);
+                        const adjustedDate = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
+                        return isNaN(adjustedDate.getTime()) ? null : adjustedDate;
+                    }
+                    if (typeof dateInput === 'string') {
+                        let date = new Date(dateInput);
+                        if (!isNaN(date.getTime())) return date;
+                        const parts = dateInput.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+                        if (parts) {
+                            const isoDate = new Date(parts[3], parts[2] - 1, parts[1]);
+                            if (!isNaN(isoDate.getTime())) return isoDate;
+                        }
+                    }
+                    return null;
+                }
+
+                function classificarMensagem(texto) {
+                    for (const status of ordemPrioridade) {
+                        const palavrasChave = regrasClassificacao[status];
+                        for (const palavra of palavrasChave) {
+                            if (new RegExp(`\\b${palavra}\\b`, 'i').test(texto)) return status;
+                        }
+                    }
+                    return null;
+                }
+
+                function analiseProfunda(texto) {
+                    let scores = {};
+                    ordemPrioridade.forEach(motivo => scores[motivo] = 0);
+                    for (const motivo of ordemPrioridade) {
+                        regrasClassificacao[motivo].forEach(palavra => {
+                            const matches = (texto.match(new RegExp(`\\b${palavra}\\b`, 'gi')) || []).length;
+                            if (matches > 0) scores[motivo] += matches;
+                        });
+                    }
+                    let melhorMotivo = null, maxScore = 0;
+                    for (const motivo in scores) {
+                        if (scores[motivo] > maxScore) {
+                            maxScore = scores[motivo];
+                            melhorMotivo = motivo;
+                        }
+                    }
+                    return melhorMotivo;
+                }
+                
+                function calculateDateDifference(dateStr1, dateStr2, serviceLevel) {
+                    const date1 = parseDate(dateStr1);
+                    const date2 = parseDate(dateStr2);
+                    if (!date1 || !date2) return { text: 'N/A', className: 'text-gray-500 dark:text-gray-400', differenceValue: null };
+
+                    const isUrgent = serviceLevel && (serviceLevel.toLowerCase() === 'direto' || serviceLevel.toLowerCase() === 'emergência');
+                    const isContractualTimeZero = date1.getHours() === 0 && date1.getMinutes() === 0 && date1.getSeconds() === 0;
+
+                    if (isUrgent && !isContractualTimeZero) {
+                        const diffMs = date2.getTime() - date1.getTime();
+                        const differenceValue = diffMs / 86400000;
+                        if (diffMs <= 0) return { text: 'No prazo', className: 'font-bold text-green-500', differenceValue };
+
+                        const diffMinutesTotal = Math.floor(diffMs / 60000);
+                        const diffHoursTotal = Math.floor(diffMinutesTotal / 60);
+                        const days = Math.floor(diffHoursTotal / 24);
+                        const hours = diffHoursTotal % 24;
+                        const minutes = diffMinutesTotal % 60;
+                        let text = `+${days > 0 ? `${days}d ` : ''}${hours > 0 ? `${hours}h ` : ''}${minutes > 0 ? `${minutes}m ` : ''}`.trim() + ' de atraso';
+                        return { text, className: 'font-bold text-red-500', differenceValue };
+                    } else {
+                        const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+                        const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+                        const differenceValue = Math.round((d2 - d1) / 86400000);
+                        let text, className;
+                        if (differenceValue > 0) { text = `+${differenceValue} dia(s) de atraso`; className = 'font-bold text-red-500'; } 
+                        else if (differenceValue < 0) { text = `${Math.abs(differenceValue)} dia(s) adiantado`; className = 'font-bold text-green-500'; }
+                        else { text = 'No prazo'; className = 'font-bold text-green-500'; }
+                        return { text, className, differenceValue };
+                    }
+                }
+
+                function processData(data) {
+                    learnedClassifications = loadCorrections();
+                    const dtmGroups = data.reduce((acc, row) => {
+                        const dtm = row.DTM ? String(row.DTM).trim() : null;
+                        if (!dtm) return acc;
+                        if (!acc[dtm]) acc[dtm] = [];
+                        acc[dtm].push(row);
+                        return acc;
+                    }, {});
+
+                    const finalClassification = [];
+                    for (const dtm in dtmGroups) {
+                        const dtmRows = dtmGroups[dtm];
+                        const firstRow = dtmRows[0] || {};
+                        const carrier = firstRow.TRANSPORTADORA || 'N/A';
+                        const serviceLevel = firstRow.NIVEL_SERVICO || 'N/A';
+                        let statusFinal, classificationReason = 'N/A';
+
+                        if (learnedClassifications[dtm]) {
+                            statusFinal = learnedClassifications[dtm];
+                            classificationReason = 'Classificação manual prévia (aprendida).';
+                        } else {
+                            const hasMessages = dtmRows.some(row => row.MENSAGEM && String(row.MENSAGEM).trim() !== '');
+
+                            if (!hasMessages) {
+                                statusFinal = "Sem Diligenciamento";
+                                classificationReason = "Nenhuma mensagem de diligenciamento encontrada.";
+                            } else {
+                                const lastMessage = dtmRows[dtmRows.length - 1];
+                                const lastMessageText = limparTexto(lastMessage.MENSAGEM || '');
+                                const isLastFromCarrier = lastMessage && String(lastMessage.RESPOSTA_TRANSPORTADOR).toLowerCase() === 'sim';
+                                const isPetrobrasUser = petrobrasUsers.some(user => user.toUpperCase() === (lastMessage.USUARIO || '').toUpperCase());
+                                const hasCarrierResponse = dtmRows.some(row => String(row.RESPOSTA_TRANSPORTADOR).toLowerCase() === 'sim');
+
+                                if (!hasCarrierResponse) {
+                                    statusFinal = "Sem justificativa";
+                                    classificationReason = "Pedido possui apenas mensagens da Petrobras, sem resposta da transportadora.";
+                                } else if (isLastFromCarrier && ['entregue', 'entrega realizada'].some(k => lastMessageText.includes(k))) {
+                                    const contractualDate = parseDate(firstRow.DT_ENTREGA_CONTRATUAL);
+                                    const effectiveDate = parseDate(firstRow.DT_ENTREGA_EFETIVA);
+                                    if (contractualDate && effectiveDate && effectiveDate > contractualDate) {
+                                        statusFinal = 'Atraso operacional da transportadora';
+                                        classificationReason = "Entrega confirmada após o prazo.";
+                                    }
+                                } else if (isPetrobrasUser && ['temos previsao', 'gentileza atualizar'].some(k => lastMessageText.includes(k))) {
+                                     statusFinal = 'Atraso operacional da transportadora';
+                                     classificationReason = "Cobrança da Petrobras sem resposta.";
+                                }
+                                
+                                if (!statusFinal) {
+                                    const textoCompleto = dtmRows.map(row => limparTexto(row.MENSAGEM || '')).join(' ');
+                                    statusFinal = classificarMensagem(textoCompleto) || analiseProfunda(textoCompleto) || 'Atraso operacional da transportadora';
+                                    if (statusFinal === 'Atraso operacional da transportadora') classificationReason = "Padrão (nenhuma regra específica encontrada).";
+                                    else classificationReason = "Classificado por palavra-chave.";
+                                }
+                            }
+                        }
+                        finalClassification.push({ DTM: dtm, 'Status Final do Pedido': statusFinal, 'Motivo da Classificação': classificationReason, 'TRANSPORTADORA': carrier, 'NIVEL_SERVICO': serviceLevel });
+                    }
+                    return finalClassification;
+                }
+                
+                function calculateRanking(results) {
+                    if (!results || results.length === 0) return [];
+                    const counts = results.reduce((acc, row) => {
+                        const motivo = row['Status Final do Pedido'];
+                        acc[motivo] = (acc[motivo] || 0) + 1;
+                        return acc;
+                    }, {});
+                    const total = results.length;
+                    return Object.entries(counts)
+                        .map(([motivo, quantidade]) => ({ motivo, quantidade, percentage: (quantidade / total) }))
+                        .sort((a, b) => b.quantidade - a.quantidade);
+                }
+
+                // --- Funções de Desenho de Gráfico ---
+                function createParetoChart(rankingData) {
+                    if (paretoChartInstance) paretoChartInstance.destroy();
+                    const ctx = paretoChartCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, paretoChartCanvas.width, paretoChartCanvas.height);
+                    if (!rankingData || rankingData.length === 0) {
+                        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = "16px 'Inter', sans-serif";
+                        ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7281';
+                        ctx.fillText('Nenhum dado para exibir.', paretoChartCanvas.width / 2, paretoChartCanvas.height / 2);
+                        ctx.restore(); return;
+                    }
+                    const chartConfig = getChartConfig(rankingData);
+                    paretoChartInstance = new Chart(ctx, chartConfig);
+                    paretoChartCanvas.onclick = (e) => {
+                        const elements = paretoChartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                        if (elements.length > 0) {
+                            const label = paretoChartInstance.data.labels[elements[0].index];
+                            filterSelect.value = label;
+                            applyFiltersAndRedraw();
+                            if (!chartModal.classList.contains('hidden')) chartModal.classList.add('hidden');
+                        }
+                    };
+                }
+
+                function getChartConfig(rankingData) {
+                    let cumulativePercentage = 0;
+                    const cumulativeData = rankingData.map(item => (cumulativePercentage += item.percentage, (cumulativePercentage * 100).toFixed(2)));
+                    const isDarkMode = document.documentElement.classList.contains('dark');
+                    const textColor = isDarkMode ? '#e5e7eb' : '#374151';
+                    const lineTextColor = isDarkMode ? '#fca5a5' : '#b91c1c';
+
+                    return {
+                        type: 'bar',
+                        data: {
+                            labels: rankingData.map(item => item.motivo),
+                            datasets: [
+                                { 
+                                    label: 'Quantidade', 
+                                    data: rankingData.map(item => item.quantidade), 
+                                    backgroundColor: 'rgba(59, 130, 246, 0.7)', 
+                                    yAxisID: 'y' 
+                                }, 
+                                { 
+                                    label: '% Acumulado', 
+                                    data: cumulativeData, 
+                                    type: 'line', 
+                                    borderColor: 'rgba(239, 68, 68, 0.8)', 
+                                    yAxisID: 'y1', 
+                                    borderWidth: 3, 
+                                    pointRadius: 0, 
+                                    tension: 0.1 
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            scales: {
+                                x: { ticks: { color: textColor }, grid: { display: false } },
+                                y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Quantidade', color: textColor }, ticks: { color: textColor } },
+                                y1: { type: 'linear', position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: v => v + '%', color: textColor }, title: { display: true, text: '% Acumulado', color: textColor } }
+                            },
+                            plugins: { 
+                                legend: { labels: { color: textColor } }, 
+                                tooltip: { mode: 'index', intersect: false },
+                                datalabels: {
+                                    color: (context) => (context.dataset.type === 'line' ? lineTextColor : textColor),
+                                    anchor: 'end',
+                                    align: 'end',
+                                    formatter: (value, context) => {
+                                        if (context.dataset.type === 'line') {
+                                            return parseFloat(value).toFixed(1) + '%';
+                                        }
+                                        return value > 0 ? value : null;
+                                    },
+                                    font: {
+                                        weight: 'bold'
+                                    }
+                                }
+                            }
+                        }
+                    };
+                }
+                
+                function createDelayDistributionChart(filteredData) {
+                    if (delayDistributionChartInstance) delayDistributionChartInstance.destroy();
+                    const ctx = delayDistributionChartCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, delayDistributionChartCanvas.width, delayDistributionChartCanvas.height);
+
+                    const lateOrders = filteredData.map(item => {
+                        const dtmData = rawSheetData.find(row => String(row.DTM) === String(item.DTM)) || {};
+                        const diff = calculateDateDifference(dtmData.DT_ENTREGA_CONTRATUAL, dtmData.DT_ENTREGA_EFETIVA, dtmData.NIVEL_SERVICO);
+                        return { ...item, delayDays: diff.differenceValue };
+                    }).filter(item => item.delayDays > 0);
+
+                    if (lateOrders.length === 0) {
+                        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = "16px 'Inter', sans-serif";
+                        ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7281';
+                        ctx.fillText('Nenhum pedido com atraso para exibir.', delayDistributionChartCanvas.width / 2, delayDistributionChartCanvas.height / 2);
+                        ctx.restore(); return;
+                    }
+
+                    const delayBuckets = { "Até 2 dias": 0, "3 a 5 dias": 0, "6 a 10 dias": 0, "11 a 15 dias": 0, "16 a 20 dias": 0, "21 a 30 dias": 0, "Acima de 30 dias": 0 };
+                    lateOrders.forEach(item => {
+                        const days = Math.ceil(item.delayDays);
+                        if (days <= 2) delayBuckets["Até 2 dias"]++;
+                        else if (days <= 5) delayBuckets["3 a 5 dias"]++;
+                        else if (days <= 10) delayBuckets["6 a 10 dias"]++;
+                        else if (days <= 15) delayBuckets["11 a 15 dias"]++;
+                        else if (days <= 20) delayBuckets["16 a 20 dias"]++;
+                        else if (days <= 30) delayBuckets["21 a 30 dias"]++;
+                        else delayBuckets["Acima de 30 dias"]++;
+                    });
+
+                    const labels = Object.keys(delayBuckets);
+                    const dataValues = Object.values(delayBuckets);
+                    const percentageValues = dataValues.map(count => (count / lateOrders.length) * 100);
+                    const isDarkMode = document.documentElement.classList.contains('dark');
+                    const textColor = isDarkMode ? '#e5e7eb' : '#374151';
+
+                    delayDistributionChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{ label: 'Qtd. Pedidos', data: dataValues, backgroundColor: 'rgba(251, 146, 60, 0.7)', yAxisID: 'y' }, { label: '% do Total de Atrasos', data: percentageValues, type: 'line', borderColor: 'rgba(239, 68, 68, 0.8)', borderWidth: 3, pointRadius: 3, fill: false, yAxisID: 'y1' }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            scales: {
+                                x: { grid: { display: false }, ticks: { color: textColor } },
+                                y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Qtd. de Pedidos', color: textColor }, ticks: { color: textColor } },
+                                y1: { type: 'linear', position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: value => value.toFixed(0) + '%', color: textColor }, title: { display: true, text: '% do Total', color: textColor } }
+                            },
+                            plugins: { 
+                                legend: { labels: { color: textColor } }, 
+                                tooltip: { mode: 'index', intersect: false },
+                                datalabels: {
+                                    display: true,
+                                    color: (context) => (context.dataset.type === 'line' ? (isDarkMode ? '#fca5a5' : '#b91c1c') : textColor),
+                                    anchor: 'end',
+                                    align: 'top',
+                                    formatter: (value, context) => {
+                                        if (context.dataset.type === 'line') {
+                                            return value.toFixed(1) + '%';
+                                        }
+                                        return value > 0 ? value : '';
+                                    },
+                                    font: {
+                                        weight: 'bold'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                function createServiceLevelChart(filteredData) {
+                    if (serviceLevelChartInstance) serviceLevelChartInstance.destroy();
+                    const ctx = serviceLevelChartCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, serviceLevelChartCanvas.width, serviceLevelChartCanvas.height);
+
+                    const lateOrders = filteredData.filter(item => {
+                        const dtmData = rawSheetData.find(row => String(row.DTM) === String(item.DTM)) || {};
+                        return (calculateDateDifference(dtmData.DT_ENTREGA_CONTRATUAL, dtmData.DT_ENTREGA_EFETIVA, dtmData.NIVEL_SERVICO).differenceValue > 0);
+                    });
+
+                    if (lateOrders.length === 0) {
+                         ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = "16px 'Inter', sans-serif";
+                         ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7281';
+                         ctx.fillText('Nenhum pedido com atraso para exibir.', serviceLevelChartCanvas.width / 2, serviceLevelChartCanvas.height / 2);
+                         ctx.restore(); return;
+                    }
+                    
+                    const serviceLevelGroups = lateOrders.reduce((acc, item) => {
+                        const level = item.NIVEL_SERVICO || 'N/A';
+                        acc[level] = (acc[level] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    const chartData = Object.entries(serviceLevelGroups).sort((a, b) => b[1] - a[1]);
+                    const labels = chartData.map(item => item[0]);
+                    const data = chartData.map(item => item[1]);
+                    const isDarkMode = document.documentElement.classList.contains('dark');
+                    const textColor = isDarkMode ? '#e5e7eb' : '#374151';
+
+                    serviceLevelChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{ label: 'Qtd. Pedidos Atrasados', data: data, backgroundColor: ['rgba(59, 130, 246, 0.7)', 'rgba(239, 68, 68, 0.7)', 'rgba(22, 163, 74, 0.7)', 'rgba(251, 146, 60, 0.7)', 'rgba(139, 92, 246, 0.7)'], borderWidth: 1 }]
+                        },
+                        options: {
+                            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                            scales: { x: { grid: { display: false }, ticks: { color: textColor }, beginAtZero: true }, y: { ticks: { color: textColor } } },
+                            plugins: { 
+                                legend: { display: false }, 
+                                datalabels: { 
+                                    display: true, 
+                                    anchor: 'end', 
+                                    align: 'end', 
+                                    color: textColor, 
+                                    font: { weight: 'bold' },
+                                    formatter: (value) => (value > 0 ? value : null)
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                function updateDashboard() {
+                    const totalCount = finalResults.length;
+                    const unclassifiedCount = finalResults.filter(r => r['Status Final do Pedido'] === 'Não Classificado').length;
+                    
+                    if (totalCount > 0) {
+                        const assertiveness = ((totalCount - unclassifiedCount) / totalCount) * 100;
+                        if (assertivenessGauge) {
+                            assertivenessGauge.refresh(assertiveness);
+                        } else {
+                            assertivenessGauge = new JustGage({
+                                id: 'assertiveness-gauge', value: assertiveness, min: 0, max: 100, symbol: '%', pointer: true, gaugeWidthScale: 0.6,
+                                decimals: 2, customSectors: [{ color: '#ef4444', lo: 0, hi: 49.99 }, { color: '#f59e0b', lo: 50, hi: 79.99 }, { color: '#22c55e', lo: 80, hi: 100 }],
+                                counter: true, relativeGaugeSize: true
+                            });
+                        }
+                        unclassifiedSummary.classList.remove('hidden');
+                    } else {
+                        unclassifiedSummary.classList.add('hidden');
+                    }
+                    populateFilters();
+                    applyFiltersAndRedraw();
+                    updateAnalysisSummary();
+                }
+
+                function applyFiltersAndRedraw() {
+                    const selectedCarrier = carrierFilter.value;
+                    const selectedServiceLevel = serviceLevelFilter.value;
+                    const selectedMotivo = filterSelect.value;
+                    const selectedAnalyzed = analyzedFilter.value;
+                    const selectedDeliveryStatus = deliveryStatusFilter.value;
+                    const analyzedStatus = loadAnalyzedStatus();
+                    
+                    currentFilteredData = finalResults.filter(item => {
+                         const dtmData = rawSheetData.find(row => String(row.DTM) === String(item.DTM)) || {};
+                         const diff = calculateDateDifference(dtmData.DT_ENTREGA_CONTRATUAL, dtmData.DT_ENTREGA_EFETIVA, dtmData.NIVEL_SERVICO);
+                         
+                         const deliveryMatch = (selectedDeliveryStatus === 'all') || (selectedDeliveryStatus === 'on-time' && !diff.text.includes('atraso')) || (selectedDeliveryStatus === 'late' && diff.text.includes('atraso'));
+                         const analyzedMatch = (selectedAnalyzed === 'all') || (selectedAnalyzed === 'analyzed' && analyzedStatus[item.DTM]) || (selectedAnalyzed === 'not-analyzed' && !analyzedStatus[item.DTM]);
+                         const carrierMatch = selectedCarrier === 'all' || item.TRANSPORTADORA === selectedCarrier;
+                         const serviceLevelMatch = selectedServiceLevel === 'all' || item.NIVEL_SERVICO === selectedServiceLevel;
+                         const motivoMatch = selectedMotivo === 'all' || item['Status Final do Pedido'] === selectedMotivo;
+                         
+                         return deliveryMatch && analyzedMatch && carrierMatch && serviceLevelMatch && motivoMatch;
+                    });
+
+                    const rankingData = calculateRanking(currentFilteredData);
+                    totalCountDisplay.textContent = `Exibindo: ${currentFilteredData.length} Pedidos`;
+                    displayRankingTable(rankingData);
+                    createParetoChart(rankingData);
+                    createDelayDistributionChart(currentFilteredData);
+                    createServiceLevelChart(currentFilteredData);
+                    clearChartFilterBtn.classList.toggle('hidden', filterSelect.value === 'all');
+                }
+
+                function populateFilters() {
+                    const createOptions = (data, key) => [...new Set(data.map(item => item[key] || 'N/A'))].sort();
+                    
+                    const motives = createOptions(finalResults, 'Status Final do Pedido');
+                    filterSelect.innerHTML = '<option value="all">Todos os Motivos</option>' + motives.map(m => `<option value="${m}">${m}</option>`).join('');
+
+                    const carriers = createOptions(finalResults, 'TRANSPORTADORA');
+                    carrierFilter.innerHTML = '<option value="all">Todas Transportadoras</option>' + carriers.map(c => `<option value="${c}">${c}</option>`).join('');
+
+                    const serviceLevels = createOptions(finalResults, 'NIVEL_SERVICO');
+                    serviceLevelFilter.innerHTML = '<option value="all">Todos Níveis de Serviço</option>' + serviceLevels.map(s => `<option value="${s}">${s}</option>`).join('');
+                }
+
+                function updateAnalysisSummary() {
+                    if (!finalResults.length) { analysisSummary.classList.add('hidden'); return; }
+                    const analyzedStatus = loadAnalyzedStatus();
+                    const analyzedCount = finalResults.filter(item => analyzedStatus[item.DTM]).length;
+                    
+                    document.getElementById('summary-total').textContent = finalResults.length;
+                    document.getElementById('summary-analyzed').textContent = analyzedCount;
+                    document.getElementById('summary-not-analyzed').textContent = finalResults.length - analyzedCount;
+                    analysisSummary.classList.remove('hidden');
+                }
+
+                function displayRankingTable(rankingData) {
+                     rankingTableBody.innerHTML = '';
+                     rankingData.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">${item.motivo}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${item.quantidade}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${(item.percentage * 100).toFixed(2)}%</td>
+                            <td class="px-6 py-4 text-sm font-medium"><button class="expand-details-btn text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" data-motivo="${item.motivo}">Ver Detalhes</button></td>
+                        `;
+                        const detailsRow = document.createElement('tr');
+                        detailsRow.classList.add('details-row', 'hidden');
+                        detailsRow.dataset.detailsFor = item.motivo;
+                        detailsRow.innerHTML = `<td colspan="4" class="p-0"></td>`;
+                        rankingTableBody.appendChild(tr);
+                        rankingTableBody.appendChild(detailsRow);
+                     });
+                }
+                 function formatarData(dataString) {
+                    if (!dataString || typeof dataString !== 'string') return 'Data indisponível';
+                    const [data, hora] = dataString.split(' ');
+                    if (!data || !hora) return dataString;
+                    const [ano, mes, dia] = data.split('-');
+                    const [h, m] = hora.split(':');
+                    if(!dia || !mes || !ano || !h || !m) return dataString;
+                    return `${dia}/${mes}/${ano} ${h}:${m}`;
+                }
+                function formatarDataSimples(dateInput) {
+                    const date = parseDate(dateInput);
+                    if (!date) return 'N/A';
+                    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+                }
+                function formatarDataCompleta(dateInput) {
+                    const date = parseDate(dateInput);
+                    if (!date) return 'N/A';
+                    return `${formatarDataSimples(date)} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                }
+                function handleReclassification(dtm, newMotivo) {
+                    learnedClassifications = loadCorrections();
+                    learnedClassifications[dtm] = newMotivo;
+                    localStorage.setItem('userCorrections', JSON.stringify(learnedClassifications));
+                    const resultIndex = finalResults.findIndex(r => r.DTM == dtm);
+                    if (resultIndex > -1) {
+                        finalResults[resultIndex]['Status Final do Pedido'] = newMotivo;
+                    }
+                    applyFiltersAndRedraw();
+                }
+
+                // --- Event Listeners do Analisador ---
+                fileInput.addEventListener('change', () => fileInput.files.length && handleFile(fileInput.files[0]));
+                dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drop-zone--over'); });
+                ['dragleave', 'dragend'].forEach(type => dropZone.addEventListener(type, () => dropZone.classList.remove('drop-zone--over')));
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files.length) {
+                        fileInput.files = e.dataTransfer.files;
+                        handleFile(e.dataTransfer.files[0]);
+                    }
+                    dropZone.classList.remove('drop-zone--over');
+                });
+
+                processButton.addEventListener('click', () => {
+                    if (!fileData) return;
+                    uploadArea.classList.add('hidden');
+                    loadingArea.classList.remove('hidden');
+                    setTimeout(() => {
+                        try {
+                            const workbook = XLSX.read(fileData, { type: 'buffer' });
+                            const firstSheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[firstSheetName];
+                            rawSheetData = XLSX.utils.sheet_to_json(worksheet, { cellDates: true });
+                            finalResults = processData(rawSheetData);
+
+                            if (finalResults.length === 0) {
+                                showMessage("Nenhum pedido encontrado para análise.", false);
+                                loadingArea.classList.add('hidden');
+                                uploadArea.classList.remove('hidden');
+                                return;
+                            }
+                            updateDashboard();
+                            loadingArea.classList.add('hidden');
+                            resultsArea.classList.remove('hidden');
+                        } catch (error) {
+                            console.error("Erro ao processar o arquivo XLSX:", error);
+                            showMessage("Ocorreu um erro ao processar sua planilha.", true);
+                            loadingArea.classList.add('hidden');
+                            uploadArea.classList.remove('hidden');
+                        }
+                    }, 500);
+                });
+                
+                [carrierFilter, serviceLevelFilter, filterSelect, analyzedFilter, deliveryStatusFilter].forEach(filter => {
+                    filter.addEventListener('change', applyFiltersAndRedraw);
+                });
+                clearChartFilterBtn.addEventListener('click', () => { filterSelect.value = 'all'; applyFiltersAndRedraw(); });
+
+                toggleChartBtn.addEventListener('click', () => {
+                    const isHidden = chartContainer.classList.toggle('hidden');
+                    dashboardGrid.classList.toggle('lg:grid-cols-2', !isHidden);
+                    rankingContainer.classList.toggle('lg:col-span-2', isHidden);
+                    toggleChartBtn.title = isHidden ? "Mostrar Gráfico" : "Ocultar Gráfico";
+                    toggleChartBtn.querySelector('svg').innerHTML = isHidden
+                        ? `<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a10.05 10.05 0 011.9-4.475M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 17.593l-2.121-2.121m-2.121-2.121l-2.121-2.121M12 4.5A9.954 9.954 0 0117.593 7.407" />`
+                        : `<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
+                });
+
+                downloadButton.addEventListener('click', () => {
+                    const dataToExport = currentFilteredData.map(item => ({
+                        'DTM': String(item.DTM).trim(),
+                        'Status Final do Pedido': item['Status Final do Pedido'],
+                        'Motivo da Classificação': item['Motivo da Classificação'],
+                        'TRANSPORTADORA': item['TRANSPORTADORA'],
+                        'NIVEL_SERVICO': item['NIVEL_SERVICO']
+                    }));
+
+                    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Resultados Filtrados");
+                    XLSX.writeFile(workbook, "status_final_pedidos_filtrado.xlsx");
+                });
+
+                document.documentElement.addEventListener('themeChanged', () => {
+                    if (finalResults.length > 0) applyFiltersAndRedraw();
+                });
+                
+                 restartButton.addEventListener('click', () => {
+                    fileData = null; rawSheetData = []; finalResults = []; currentFilteredData = []; fileInput.value = ''; fileNameDisplay.textContent = ''; processButton.disabled = true;
+                    if(paretoChartInstance) paretoChartInstance.destroy();
+                    if(delayDistributionChartInstance) delayDistributionChartInstance.destroy();
+                    if(serviceLevelChartInstance) serviceLevelChartInstance.destroy();
+                    resultsArea.classList.add('hidden');
+                    analysisSummary.classList.add('hidden');
+                    uploadArea.classList.remove('hidden');
+                });
+
+                 showLogicBtn.addEventListener('click', () => { logicModal.classList.remove('hidden'); logicModalOverlay.classList.remove('hidden'); });
+                 logicModalCloseBtn.addEventListener('click', () => { logicModal.classList.add('hidden'); logicModalOverlay.classList.add('hidden'); });
+                 logicModalOverlay.addEventListener('click', () => { logicModal.classList.add('hidden'); logicModalOverlay.classList.add('hidden'); });
+                 
+                 expandChartBtn.addEventListener('click', () => {
+                     if (paretoChartInstance) {
+                         chartModal.classList.remove('hidden');
+                         chartModalOverlay.classList.remove('hidden');
+                         const rankingData = calculateRanking(currentFilteredData);
+                         const chartConfig = getChartConfig(rankingData);
+                         if(paretoChartExpandedInstance) paretoChartExpandedInstance.destroy();
+                         paretoChartExpandedInstance = new Chart(paretoChartExpandedCanvas.getContext('2d'), chartConfig);
+                     }
+                 });
+                 chartModalCloseBtn.addEventListener('click', () => { if(paretoChartExpandedInstance) paretoChartExpandedInstance.destroy(); chartModal.classList.add('hidden'); chartModalOverlay.classList.add('hidden'); });
+                 chartModalOverlay.addEventListener('click', () => { if(paretoChartExpandedInstance) paretoChartExpandedInstance.destroy(); chartModal.classList.add('hidden'); chartModalOverlay.classList.add('hidden'); });
+
+                 exportHistoryBtn.addEventListener('click', () => {
+                    const historyData = { corrections: loadCorrections(), analyzed: loadAnalyzedStatus() };
+                    const blob = new Blob([JSON.stringify(historyData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'historico_analisador.json';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showMessage('Histórico exportado com sucesso!');
+                 });
+
+                 importHistoryBtn.addEventListener('click', () => importInput.click());
+                 importInput.addEventListener('change', (e) => {
+                     const file = e.target.files[0];
+                     if (!file) return;
+                     const reader = new FileReader();
+                     reader.onload = function(e) {
+                         try {
+                            const data = JSON.parse(e.target.result);
+                            if (data && data.corrections && data.analyzed) {
+                                localStorage.setItem('userCorrections', JSON.stringify(data.corrections));
+                                localStorage.setItem('userAnalyzedStatus', JSON.stringify(data.analyzed));
+                                showMessage('Histórico importado com sucesso!');
+                                if (finalResults.length > 0) {
+                                    finalResults = processData(rawSheetData);
+                                    updateDashboard();
+                                }
+                            } else {
+                                showMessage('Arquivo de histórico inválido.', true);
+                            }
+                         } catch (error) {
+                             showMessage('Erro ao ler o arquivo de histórico.', true);
+                         } finally {
+                             importInput.value = '';
+                         }
+                     };
+                     reader.readAsText(file);
+                 });
+
+                rankingTableBody.addEventListener('change', (e) => {
+                    const analyzedCheckbox = e.target.closest('.analyzed-checkbox');
+                    if (analyzedCheckbox) {
+                        const dtm = analyzedCheckbox.dataset.dtm;
+                        const isChecked = analyzedCheckbox.checked;
+                        const analyzedStatus = loadAnalyzedStatus();
+                        analyzedStatus[dtm] = isChecked;
+                        saveAnalyzedStatus(analyzedStatus);
+                        analyzedCheckbox.closest('label').classList.toggle('text-green-600', isChecked);
+                        updateAnalysisSummary();
+                    }
+                });
+
+                rankingTableBody.addEventListener('click', (e) => {
+                    const target = e.target;
+                    const expandDetailsBtn = target.closest('.expand-details-btn');
+                    const dtmHeader = target.closest('.dtm-header');
+                    const reclassifyBtn = target.closest('.reclassify-btn');
+                    const saveBtn = target.closest('.save-reclassify-btn');
+                    const suggestionSimBtn = target.closest('.suggestion-sim-btn');
+                    const suggestionNaoBtn = target.closest('.suggestion-nao-btn');
+
+                    if (expandDetailsBtn) {
+                        const motivo = expandDetailsBtn.dataset.motivo;
+                        const detailsRow = rankingTableBody.querySelector(`tr[data-details-for="${motivo}"]`);
+                        const detailsCell = detailsRow.querySelector('td');
+                        const isHidden = detailsRow.classList.contains('hidden');
+
+                        if (isHidden) {
+                            if (detailsCell.innerHTML === '') { 
+                                detailsCell.innerHTML = `<div class="p-4 text-center text-gray-500 dark:text-gray-400">Carregando detalhes...</div>`;
+                                setTimeout(() => {
+                                    const analyzedStatus = loadAnalyzedStatus();
+                                    
+                                    let dtmsForMotivo = currentFilteredData.filter(r => r['Status Final do Pedido'] === motivo);
+
+                                    let detailsHtml = '<div class="p-4 bg-gray-100 dark:bg-gray-900 max-h-96 overflow-y-auto details-content space-y-2">';
+                                    
+                                    dtmsForMotivo.forEach(item => {
+                                        const dtm = item.DTM;
+                                        const dtmData = rawSheetData.find(row => String(row.DTM) === String(dtm)) || {};
+                                        const isAnalyzed = analyzedStatus[dtm] || false;
+                                        const messageCount = rawSheetData.filter(row => String(row.DTM) === String(dtm) && row.MENSAGEM).length;
+                                        
+                                        const textoCompleto = rawSheetData.filter(row => String(row.DTM) === String(dtm)).map(msg => limparTexto(msg.MENSAGEM || '')).join(' ');
+                                        const suggestion = analiseProfunda(textoCompleto);
+                                        
+                                        const serviceLevel = dtmData.NIVEL_SERVICO || 'N/A';
+                                        const isUrgent = serviceLevel.toLowerCase() === 'direto' || serviceLevel.toLowerCase() === 'emergência';
+                                        const coletaDiff = calculateDateDifference(dtmData.DT_COLETA_CONTRATUAL, dtmData.DT_COLETA_EFETIVA, serviceLevel);
+                                        const entregaDiff = calculateDateDifference(dtmData.DT_ENTREGA_CONTRATUAL, dtmData.DT_ENTREGA_EFETIVA, serviceLevel);
+                                        
+                                        let suggestionHtml = '';
+                                        if (suggestion && suggestion !== item['Status Final do Pedido']) {
+                                            suggestionHtml = `
+                                                <div class="suggestion-box mt-2 p-2 border-t border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700">
+                                                    <p class="text-xs font-semibold">Sugestão do Modelo: <span class="font-bold text-blue-600 dark:text-blue-400">${suggestion}</span>. Aceitar?</p>
+                                                    <div class="mt-2 space-x-2">
+                                                        <button class="suggestion-sim-btn text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600" data-dtm="${dtm}" data-suggestion="${suggestion}">Sim</button>
+                                                        <button class="suggestion-nao-btn text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Não</button>
+                                                    </div>
+                                                </div>`;
+                                        }
+
+                                        detailsHtml += `
+                                            <div class="bg-white dark:bg-gray-800 rounded-md border dark:border-gray-700 shadow-sm">
+                                                <div class="flex justify-between items-center p-3 cursor-pointer dtm-header">
+                                                    <h4 class="font-bold text-sm text-gray-800 dark:text-gray-200">Pedido DTM: ${dtm}</h4>
+                                                    <div class="flex items-center space-x-3">
+                                                        <span class="text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 px-2 py-0.5 rounded-full">${messageCount} msgs</span>
+                                                        <label class="flex items-center space-x-1.5 text-xs cursor-pointer ${isAnalyzed ? 'text-green-600' : ''}">
+                                                            <input type="checkbox" class="analyzed-checkbox h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" data-dtm="${dtm}" ${isAnalyzed ? 'checked' : ''}>
+                                                            <span>Analisado</span>
+                                                        </label>
+                                                        <button class="reclassify-btn text-xs bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600" data-dtm="${dtm}">Reclassificar</button>
+                                                        <svg class="w-5 h-5 transition-transform chevron-icon text-gray-500 dark:text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                                <div class="p-3 border-t dark:border-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-400">
+                                                    <div>
+                                                        <div class="grid grid-cols-2 gap-2">
+                                                            <div><strong>Coleta Contratual:</strong><br>${isUrgent ? formatarDataCompleta(dtmData.DT_COLETA_CONTRATUAL) : formatarDataSimples(dtmData.DT_COLETA_CONTRATUAL)}</div>
+                                                            <div><strong>Coleta Efetiva:</strong><br>${isUrgent ? formatarDataCompleta(dtmData.DT_COLETA_EFETIVA) : formatarDataSimples(dtmData.DT_COLETA_EFETIVA)}</div>
+                                                        </div>
+                                                        <div class="mt-1"><strong>Diferença Coleta:</strong> <span class="${coletaDiff.className}">${coletaDiff.text}</span></div>
+                                                    </div>
+                                                    <div>
+                                                        <div class="grid grid-cols-2 gap-2">
+                                                            <div><strong>Entrega Contratual:</strong><br>${isUrgent ? formatarDataCompleta(dtmData.DT_ENTREGA_CONTRATUAL) : formatarDataSimples(dtmData.DT_ENTREGA_CONTRATUAL)}</div>
+                                                            <div><strong>Entrega Efetiva:</strong><br>${isUrgent ? formatarDataCompleta(dtmData.DT_ENTREGA_EFETIVA) : formatarDataSimples(dtmData.DT_ENTREGA_EFETIVA)}</div>
+                                                        </div>
+                                                        <div class="mt-1"><strong>Diferença Entrega:</strong> <span class="${entregaDiff.className}">${entregaDiff.text}</span></div>
+                                                    </div>
+                                                    <div><strong>Transportadora:</strong><br>${dtmData.TRANSPORTADORA || 'N/A'}</div>
+                                                    <div><strong>Nível Serviço:</strong><br>${serviceLevel}</div>
+                                                </div>
+                                                <div class="p-3 border-t dark:border-gray-600 text-xs">
+                                                    <strong class="text-gray-800 dark:text-gray-200">Racional da Classificação:</strong>
+                                                    <span class="text-gray-600 dark:text-gray-400">${item['Motivo da Classificação'] || 'N/A'}</span>
+                                                </div>
+                                                ${suggestionHtml}
+                                                <div class="reclassify-form hidden p-3 border-t dark:border-gray-600"></div>
+                                                <div class="messages-container hidden p-3 border-t dark:border-gray-600 space-y-2">
+                                                    <!-- As mensagens serão carregadas aqui quando expandido -->
+                                                </div>
+                                            </div>
+                                        `;
+                                    });
+
+                                    detailsHtml += '</div>';
+                                    detailsCell.innerHTML = dtmsForMotivo.length > 0 ? detailsHtml : '<div class="p-4 text-center text-gray-500 dark:text-gray-400">Nenhum item encontrado para este motivo com os filtros atuais.</div>';
+                                }, 100);
+                            }
+                            detailsRow.classList.toggle('hidden');
+                            expandDetailsBtn.textContent = isHidden ? 'Ocultar Detalhes' : 'Ver Detalhes';
+                        }
+                        return;
+                    }
+
+                    if (dtmHeader) {
+                         if (target.closest('button') || target.closest('label') || target.closest('input')) return;
+                        const container = dtmHeader.closest('div.bg-white');
+                        const messagesContainer = container.querySelector('.messages-container');
+                        const icon = container.querySelector('.chevron-icon');
+                        
+                        const isMessagesHidden = messagesContainer.classList.toggle('hidden');
+                        icon.classList.toggle('rotate-180', !isMessagesHidden);
+
+                        if (!isMessagesHidden && messagesContainer.innerHTML.trim().includes('<!--')) {
+                            const dtm = dtmHeader.querySelector('h4').textContent.split(': ')[1];
+                            messagesContainer.innerHTML = '<p class="text-xs text-gray-400">Carregando mensagens...</p>';
+                            
+                            const messages = rawSheetData.filter(row => String(row.DTM) === dtm);
+                            let messagesHtml = '';
+                            messages.forEach(msg => {
+                                let isTransportadora = String(msg.RESPOSTA_TRANSPORTADOR).toLowerCase() === 'sim';
+                                if(petrobrasUsers.includes(String(msg.USUARIO).toUpperCase())) isTransportadora = false;
+                                const userLabel = isTransportadora ? 'Transportadora' : 'Petrobras';
+                                const labelClasses = isTransportadora ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
+
+                                messagesHtml += `
+                                    <div class="p-2 border-t dark:border-gray-700 first:border-t-0">
+                                        <p class="text-sm text-gray-700 dark:text-gray-300">${msg.MENSAGEM || ''}</p>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-right">
+                                            <strong>Usuário:</strong> ${msg.USUARIO || 'N/A'}
+                                            <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${labelClasses}">${userLabel}</span>
+                                            | <strong>Data:</strong> ${formatarData(msg.DATA_HORA)}
+                                        </div>
+                                    </div>`;
+                            });
+                            messagesContainer.innerHTML = messagesHtml || '<p class="text-xs text-gray-400">Nenhuma mensagem encontrada.</p>';
+                        }
+                        return;
+                    }
+
+                    if (reclassifyBtn) {
+                        e.stopPropagation();
+                        const container = reclassifyBtn.closest('.dtm-header').parentElement;
+                        const formContainer = container.querySelector('.reclassify-form');
+                        
+                        if (formContainer.classList.contains('hidden')) {
+                            const dtm = reclassifyBtn.dataset.dtm;
+                            let selectOptions = ordemPrioridade.map(m => `<option value="${m}">${m}</option>`).join('');
+                            formContainer.innerHTML = `
+                                <select class="reclassify-select bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <option value="">Selecione um novo motivo...</option>
+                                    ${selectOptions}
+                                </select>
+                                <button class="save-reclassify-btn mt-2 text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700" data-dtm="${dtm}">Salvar</button>
+                            `;
+                            formContainer.classList.remove('hidden');
+                        } else {
+                            formContainer.innerHTML = '';
+                            formContainer.classList.add('hidden');
+                        }
+                        return;
+                    }
+                    
+                    if (saveBtn) {
+                        const dtm = saveBtn.dataset.dtm;
+                        const newMotivo = saveBtn.previousElementSibling.value;
+                        if (newMotivo) {
+                            handleReclassification(dtm, newMotivo);
+                        }
+                        const formContainer = saveBtn.parentElement;
+                        formContainer.innerHTML = '';
+                        formContainer.classList.add('hidden');
+                        return;
+                    }
+                    
+                    if (suggestionSimBtn) {
+                        const dtm = suggestionSimBtn.dataset.dtm;
+                        const suggestion = suggestionSimBtn.dataset.suggestion;
+                        handleReclassification(dtm, suggestion);
+                        suggestionSimBtn.closest('.suggestion-box').innerHTML = '<p class="text-xs font-semibold text-green-600">Classificação aplicada e aprendida!</p>';
+                        return;
+                    }
+                    
+                    if (suggestionNaoBtn) {
+                        suggestionNaoBtn.closest('.suggestion-box').classList.add('hidden');
+                        return;
+                    }
+                });
+                 
+            })(); 
         });
     </script>
 </body>
 </html>
+
